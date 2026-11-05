@@ -1,0 +1,38 @@
+[project]
+name = "bracket"
+version = "0.3.0"
+description = "A drafting table for rooms that have to agree: people write, the machine only rewords."
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "httpx>=0.27,<1",
+    # the bedrock extra: for organizations that reach Claude through a gateway in front of AWS Bedrock
+    "anthropic[bedrock]>=2.3,<3",
+    "nltk>=3.9,<4",
+    # held to 3.8.x to match the en_core_web_sm 3.8.0 model below
+    "spacy>=3.8,<3.9",
+    "en-core-web-sm",
+    "lemminflect>=0.2.3,<0.3",
+    "pydantic>=2.7,<3",
+    "platformdirs>=4,<5",
+    "pypdf>=5,<7",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+build = ["pyinstaller>=6.11,<7"]
+
+[tool.uv]
+package = false  # an app run from its folder, not a library to install
+
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["live: real calls to the local model and to Claude (uv run pytest -m live)"]
+addopts = "-m 'not live'"

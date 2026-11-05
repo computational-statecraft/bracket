@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[bracket]</title>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<style>
+  :root{
+    --void:#0a0a0b; --white:#ffffff; --text-rest:rgba(255,255,255,.30); --dim:rgba(255,255,255,.52); --faint:rgba(255,255,255,.28);
+    --ghost:rgba(255,255,255,.16); --hair:rgba(255,255,255,.12); --wash:rgba(255,255,255,.08);
+    --brass:#a8916a; --crimson:#c83248;
+    --brk:#d9c49b; --brk-rest:rgba(217,196,155,.5); --brk-mark:rgba(217,196,155,.42);   /* bracketed, unsettled wording */
+    --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif; --sans:'DM Sans',system-ui,-apple-system,sans-serif;
+    --fs:clamp(34px,3.55vw,86px);            /* the projected text: read from the back of the room */
+    --gx:clamp(40px,5.2vw,112px);            /* page margin */
+    --gut:clamp(52px,4.6vw,104px);           /* left column for list numbers and states */
+    --ease:cubic-bezier(0.2,0,0,1);
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--white);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased}
+  ::selection{background:rgba(255,255,255,.2)}
+  button{font:inherit;color:inherit}
+  .caps{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+
+  /* brand: small, top left, on both screens */
+  .brand{position:fixed;top:30px;left:var(--gx);z-index:20;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+  .brand .line{display:flex;align-items:baseline;gap:14px}
+  .brand .mark{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:.015em;color:rgba(255,255,255,.82)}
+  .brand .app{font-family:var(--serif);font-weight:500;font-size:22px;letter-spacing:.01em;color:var(--faint)}
+  .brand .rule{width:22px;height:1px;background:var(--crimson)}
+  .brand .sub{font-size:9px;letter-spacing:.26em;color:var(--faint)}
+
+  /* ---------------- setup ---------------- */
+  #setup{position:fixed;inset:0;z-index:10;background:var(--void);overflow-y:auto;transition:opacity 420ms var(--ease)}
+  #setup.gone{opacity:0;pointer-events:none}
+  .setup-col{width:min(1040px,86vw);margin:0 auto;padding:13vh 0 80px;display:flex;flex-direction:column;gap:38px}
+  .setup-col h1{margin:14px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 .35em;font-family:var(--serif);font-weight:500;font-size:clamp(40px,3.4vw,64px);letter-spacing:.005em;line-height:1.1}
+  #docTitle{min-width:6ch;outline:none;border-bottom:1px solid transparent;transition:border-color 200ms var(--ease);cursor:text}
+  #docTitle:hover,#docTitle:focus{border-bottom-color:var(--hair)}
+  #docTitle:empty::before{content:attr(data-placeholder);color:var(--ghost)}
+  .seed-wrap{display:flex;flex-direction:column;gap:12px}
+  #seed{width:100%;min-height:24vh;max-height:46vh;padding:26px 30px;background:rgba(255,255,255,.022);border:1px solid var(--hair);border-radius:2px;outline:none;
+        font-family:var(--serif);font-size:21px;line-height:1.55;color:rgba(255,255,255,.88);resize:vertical;transition:border-color 200ms var(--ease)}
+  #seed:focus{border-color:rgba(255,255,255,.26)}
+  #seed::placeholder{color:var(--faint)}
+  #seedInfo{color:var(--faint);min-height:14px}
+  .status{display:flex;flex-direction:column}
+  .status .st{display:grid;grid-template-columns:180px 1fr auto;align-items:baseline;gap:24px;padding:15px 0;border-bottom:1px solid var(--hair)}
+  .status .st:first-child{border-top:1px solid var(--hair)}
+  .status .k{color:var(--dim)}
+  .status .v{font-size:13px;letter-spacing:.04em;color:var(--white);min-width:0}
+  .status .v.bad{color:var(--crimson)} .status .v.wait{color:var(--dim)}
+  .status .v small{display:block;margin-top:5px;font-size:12px;color:var(--dim);letter-spacing:.02em}
+  .status .test{background:none;border:0;padding:0;cursor:pointer;color:var(--faint);transition:color 160ms var(--ease)}
+  .status .test:hover{color:var(--white)}
+  .actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:baseline;gap:14px;padding:17px 30px;border-radius:1px;cursor:pointer;border:1px solid rgba(255,255,255,.6);background:var(--white);color:var(--void);transition:background 160ms var(--ease),color 160ms var(--ease)}
+  .btn:hover{background:rgba(255,255,255,.86)}
+  .btn.ghost{background:none;color:var(--white);border-color:var(--hair)} .btn.ghost:hover{border-color:rgba(255,255,255,.4)}
+  .btn .kb{opacity:.5;letter-spacing:.1em}
+  #ended{display:block;margin-top:16px;color:var(--brass);min-height:13px}
+  .setup-foot{display:flex;justify-content:space-between;margin:0 var(--gx) 26px;color:var(--ghost);font-size:10px}
+
+  /* ---------------- live ---------------- */
+  #live{position:fixed;inset:0}
+  .top-right{position:fixed;top:30px;right:var(--gx);z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:8px;text-align:right}
+  .top-right .title{font-size:9.5px;color:var(--faint)}
+  #readout{font-size:9.5px;color:var(--ghost)}
+  #scroll{position:fixed;inset:0;overflow-y:auto;scrollbar-width:none;padding:44vh var(--gx) 52vh var(--gx)}
+  #scroll::-webkit-scrollbar{display:none}
+  .fade-top,.fade-bot{position:fixed;left:0;right:0;pointer-events:none;z-index:3}
+  .fade-top{top:0;height:210px;background:linear-gradient(var(--void) 50%,rgba(10,10,11,0))}
+  .fade-bot{bottom:0;height:130px;background:linear-gradient(rgba(10,10,11,0),var(--void) 62%)}
+  #table{max-width:min(1640px,100%);display:flex;flex-direction:column}
+  .row{display:grid;grid-template-columns:var(--gut) minmax(0,1fr);column-gap:clamp(18px,1.6vw,36px);margin-top:.18em;font-size:var(--fs)}
+  .row.brk{margin-top:.95em} .row:first-child{margin-top:0}
+  .gut{position:relative;font-family:var(--serif);font-size:var(--fs);line-height:1.24;color:var(--text-rest);text-align:right;transition:color 260ms var(--ease)}
+  .gut .num{display:block}
+  .gut .mk{display:block;margin-top:10px;font-size:9px;line-height:1.3}
+  .gut .mk.agreed{color:var(--brass)} .gut .mk.open{color:var(--crimson)} .gut .mk.v{color:var(--ghost)}
+  .gut .bar{position:absolute;right:calc(-1 * clamp(10px,.9vw,20px));top:.2em;width:2px;height:1em;background:var(--crimson);display:none}
+  .row.open .gut .bar{display:block}
+  .body{min-width:0;display:flex;flex-direction:column}
+  .lead{margin-bottom:.5em;color:var(--brass);font-size:10.5px;transition:opacity 260ms var(--ease)}
+  .sent{margin:0;font-family:var(--serif);font-weight:500;font-size:var(--fs);line-height:1.24;letter-spacing:.004em;color:var(--text-rest);outline:none;white-space:pre-wrap;word-wrap:break-word;caret-color:var(--white);transition:color 260ms var(--ease)}
+  .row.h .sent{font-style:italic;font-weight:500;font-size:calc(var(--fs) * .62);letter-spacing:.01em}
+  .row.agreed .sent{color:rgba(255,255,255,.4)}
+  .row.focus .sent,.row.focus .gut{color:var(--white)}
+  .sent[data-empty]:empty::before{content:'Type a sentence';color:var(--ghost)}
+  .sent .hov{border-bottom:2px solid rgba(255,255,255,.6)}
+  .sent .alt{color:var(--brk-rest);transition:color 260ms var(--ease)} .row.focus .sent .alt{color:var(--brk)}
+  .sent .bk{color:var(--brk-mark);font-weight:400}
+  .sent .altcur{border-bottom:2px solid var(--brk)}
+  .gut .mk.brk{color:var(--brk)}
+  .addalt{display:flex;align-items:baseline;gap:14px;cursor:pointer;color:var(--brk);font-size:10.5px} .addalt:hover{color:#efe0bf}
+  .brkpanel .slot p{color:var(--brk-rest)} .brkpanel .slot.cur p,.brkpanel .slot:hover p{color:var(--brk)}
+  .brkpanel .rail{border-left-color:var(--brk-mark)}
+  .sent .sel{background:var(--wash);box-shadow:0 0 0 .12em var(--wash);border-radius:1px}
+  .extras{display:flex;flex-direction:column;gap:.55em;margin-top:.5em}
+  .syn{display:flex;align-items:baseline;gap:1.2em;font-size:calc(var(--fs) * .5)}
+  .syn .opts{display:flex;flex-wrap:wrap;align-items:baseline;gap:.9em;font-family:var(--serif);color:var(--dim)}
+  .syn .opts span.dot{color:var(--ghost)} .syn .opts span[data-i]{cursor:pointer}
+  .syn .opts span.pick{color:var(--white);border-bottom:1px solid var(--brass)}
+  .dials{display:flex;flex-wrap:wrap;align-items:baseline;gap:42px}
+  .dials .d{display:flex;align-items:baseline;gap:13px}
+  .dials .r,.dials .v{font-size:10.5px;color:var(--faint)} .dials .v{color:var(--white)}
+  .dials .r.cur{color:var(--white);border-bottom:1px solid var(--brass);padding-bottom:3px}
+  .rail{display:flex;flex-direction:column;gap:.3em;border-left:1px solid var(--hair);padding-left:.6em;margin-left:-.6em;font-size:calc(var(--fs) * .6)}
+  .slot{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:40px;cursor:pointer}
+  .slot p{margin:0;font-family:var(--serif);font-weight:400;line-height:1.28;color:var(--dim);transition:color 140ms var(--ease)}
+  .slot.cur p,.slot:hover p{color:var(--white)}
+  .slot .caps{font-size:9.5px;color:var(--faint);white-space:nowrap}
+  .slot.cur .caps{color:var(--brass)}
+  .slot .chg{color:var(--brass)} .slot.cur .chg{color:#d9c49b}
+  .slot .flag{color:var(--crimson);margin-left:14px}
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5em 1.4em;margin-top:.35em;font-size:calc(var(--fs) * .42)}
+  .grid.whole{font-size:calc(var(--fs) * .3)}
+  .cell{display:grid;grid-template-columns:1.3em minmax(0,1fr);align-items:baseline;cursor:pointer;min-width:0}
+  .cell .n{font-family:var(--sans);font-size:10px;letter-spacing:.1em;color:var(--ghost)}
+  .cell p{margin:0;font-family:var(--serif);line-height:1.25;color:var(--dim);transition:color 140ms var(--ease)}
+  .cell.cur p,.cell:hover p{color:var(--white)} .cell.cur .n{color:var(--brass)}
+  .cell .chg{color:var(--brass)} .cell.cur .chg{color:#d9c49b}
+  .cell .src{font-family:var(--sans);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ghost);margin-left:.7em}
+  .cell .flag{display:block;margin-top:.2em;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--crimson)}
+  .cell.empty p{color:var(--ghost)}
+  .agreed{margin:.1em 0 .7em;font-size:calc(var(--fs) * .27)}
+  .agreed .head{font-size:9.5px;color:var(--brass);margin-bottom:.5em}
+  .agreed .none{font-size:9.5px;color:var(--faint)}
+  .prec{display:grid;grid-template-columns:1.3em minmax(0,1fr);align-items:baseline;cursor:pointer;margin-bottom:.55em}
+  .prec .n{font-family:var(--sans);font-size:10px;letter-spacing:.1em;color:var(--ghost)}
+  .prec p{margin:0;font-family:var(--serif);line-height:1.3;color:var(--dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;transition:color 140ms var(--ease)}
+  .prec .ph{color:var(--brass)} .prec.cur p,.prec:hover p{color:var(--white)} .prec.cur .ph{color:#d9c49b} .prec.cur .n{color:var(--brass)}
+  .prec .cite{grid-column:2;margin-top:.25em;font-size:9px;color:var(--ghost)} .prec.cur .cite{color:var(--faint)}
+  .prec .cite b{font-weight:400;color:var(--brass)}
+  .more{margin-top:.9em;font-size:9.5px;color:var(--faint)}
+  .tiererr{font-size:9.5px;color:var(--crimson)}
+  .hist{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 22px;font-size:10px;color:var(--faint)}
+  .hist .now{color:var(--dim)} .hist .dis{color:var(--crimson)}
+  .inline-input{width:100%;background:none;border:0;border-bottom:1px solid var(--hair);outline:none;font-family:var(--serif);font-size:calc(var(--fs) * .5);color:var(--white);padding:.2em 0}
+  .inline-input::placeholder{color:var(--ghost)}
+  .keys{position:fixed;left:var(--gx);right:var(--gx);bottom:22px;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:40px;font-size:9.5px;letter-spacing:.16em;color:var(--ghost)}
+  #hint{transition:color 300ms var(--ease)} #hint.flash{color:var(--dim)}
+  .progress{position:fixed;left:0;bottom:0;height:2px;background:var(--brass);opacity:.7;transition:width 600ms var(--ease);z-index:6}
+
+  /* end-of-session confirmation */
+  #confirm{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(10,10,11,.96);flex-direction:column;gap:22px}
+  #confirm.on{display:flex}
+  #confirm .q{font-family:var(--serif);font-size:clamp(34px,3vw,60px)}
+  #confirm .caps{color:var(--dim)}
+
+  /* setup: model choice, key, library, settings */
+  .status .v .mlist{display:flex;flex-direction:column;gap:2px;margin-top:12px}
+  .mrow{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:7px 0;cursor:pointer;color:var(--dim)}
+  .mrow:hover,.mrow.on{color:var(--white)}
+  .mrow input{accent-color:var(--brass);margin:0}
+  .mrow .ml{font-size:13px;letter-spacing:.04em} .mrow .mm{display:block;font-size:12px;color:var(--faint);margin-top:3px;letter-spacing:.02em}
+  .mrow .mr{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
+  .mrow.dis{opacity:.45}
+  .dl{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .dlbar{height:2px;background:var(--hair);position:relative;overflow:hidden} .dlbar i{position:absolute;left:0;top:0;bottom:0;background:var(--brass);transition:width 400ms var(--ease)}
+  .small-btn{background:none;border:1px solid var(--hair);padding:9px 16px;cursor:pointer;color:var(--white);border-radius:1px;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .small-btn:hover{border-color:rgba(255,255,255,.4)} .small-btn.solid{background:var(--white);color:var(--void);border-color:var(--white)}
+  .small-btn:disabled{opacity:.4;cursor:default}
+  .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .field{background:rgba(255,255,255,.03);border:1px solid var(--hair);color:var(--white);padding:9px 12px;font:13px var(--sans);letter-spacing:.02em;border-radius:1px;outline:none;min-width:0}
+  .field:focus{border-color:rgba(255,255,255,.3)} select.field{appearance:auto}
+  #keyIn{flex:1 1 320px}
+  #settings{display:flex;flex-direction:column;gap:30px;padding-top:6px}
+  #settings h3{margin:0 0 4px;font:500 11px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--brass)}
+  .sgrid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:12px 24px;align-items:center}
+  .sgrid label{font-size:12px;color:var(--dim);letter-spacing:.04em}
+  .sgrid .note{grid-column:2;font-size:11.5px;color:var(--faint);margin-top:-6px}
+  .sgrid .locked{font-size:11px;color:var(--brass)}
+  .sgrid input.field:not([type=file]):not(#docBody):not(#docTitle2):not(#docDate){width:min(100%,520px)}
+  .muted{color:var(--faint);font-size:12px;letter-spacing:.02em;line-height:1.6}
+  .muted code{font-size:11.5px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="brand" aria-label="bracket">
+  <span class="line"><span class="mark" id="brandOrg" hidden></span><span class="app">[bracket]</span></span>
+  <span class="rule" aria-hidden="true"></span>
+</div>
+
+<!-- ======== setup ======== -->
+<section id="setup" aria-label="Setup">
+  <div class="setup-col">
+    <div>
+      <h1><span id="docTitle" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Name this session" aria-label="Session title"></span></h1>
+      <span id="ended" class="caps"></span>
+    </div>
+    <div class="seed-wrap">
+      <textarea id="seed" spellcheck="false" placeholder="Paste the draft. Headings, bold lead-ins and numbered lists are kept as structure."></textarea>
+      <div id="seedInfo" class="caps"></div>
+    </div>
+    <div class="status" id="status">
+      <div class="st"><span class="k caps">Lexicon</span><span class="v wait" id="stLex">Checking…</span><span></span></div>
+      <div class="st"><span class="k caps">Local model</span><div class="v wait" id="stLocal">Checking…</div><button class="test caps" id="testLocal">Test</button></div>
+      <div class="st"><span class="k caps">Agreed language</span><div class="v wait" id="stLib">Checking…</div><span></span></div>
+      <div class="st"><span class="k caps">Claude</span><div class="v wait" id="stCloud">Checking…</div><button class="test caps" id="testCloud">Test</button></div>
+      <div class="st"><span class="k caps">Session</span><span class="v" id="stLog">…</span><button class="test caps" id="settingsBtn">Settings</button></div>
+    </div>
+    <div id="settings" hidden></div>
+    <div class="actions">
+      <button class="btn caps" id="beginBtn">Begin live session <span class="kb" data-kb>⌘↵</span></button>
+      <button class="btn ghost caps" id="resumeBtn" hidden></button>
+    </div>
+  </div>
+  <div class="setup-foot caps"><span>F full screen</span><span id="setupSession"></span></div>
+</section>
+
+<!-- ======== live ======== -->
+<section id="live" aria-label="Live drafting">
+  <div class="top-right"><span class="title caps" id="headTitle"></span><span class="caps" id="readout"></span></div>
+  <div id="scroll"><div id="table"></div></div>
+  <div class="fade-top"></div><div class="fade-bot"></div>
+  <div class="keys caps"><span id="hint"></span><span id="keysRight" data-kb>⌥E export · ⌥Q end</span></div>
+  <div class="progress" id="progress" style="width:0"></div>
+</section>
+
+<div id="confirm" role="dialog" aria-label="End session">
+  <div class="q">End the session?</div>
+  <div class="caps">↵ end and save the record · esc keep drafting</div>
+</div>
+
+<script>
+/* ---------------- state ---------------- */
+const S = {
+  doc: { sentences: [] },        // {id,text,state,version,kind,label,brk,history:[{version,text,at,via}],dissents:[]}
+  undo: [], redo: [],
+  focusId: null,
+  live: false,
+  mode: 'rest',                   // rest | hover | rail | sentence | dissent | confirm
+  hover: null,                    // {id,start,end,opts:[],pick:int}
+  rail: null,                     // {id,start,end,source,slots:[{text,flags,tier,ms}],cur:int,dials:{strength,register,length},sse}
+  showHist: null,
+  status: null,
+  cache: new Map(),
+};
+const REGISTERS = ['plain','institutional','formal'], LENGTHS = ['shorter','same','longer'];
+// Mac key symbols on a Mac; Ctrl / Alt / Shift elsewhere (the key handling accepts both)
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const kb = t => MAC ? t : t.replace(/⌘/g, 'Ctrl+').replace(/⌥/g, 'Alt+').replace(/⇧/g, 'Shift+');
+document.querySelectorAll('[data-kb]').forEach(el => { el.textContent = kb(el.textContent); });
+const KEYS_REST = kb('double-click a word for proposals and alternatives · ⌘↵ rewrite sentence · ⌥B bracket · ⌥ hover words · ⇧↵ agree · ⌥O open · ⌥D dissent · ⌥H history · ⌥↑↓ move · ⌘Z undo');
+const $ = s => document.querySelector(s);
+// every write carries X-Bracket: the server refuses writes without it, so other web pages cannot drive it
+const api = (p, body, method = 'POST') => fetch(p, { method, headers:{'Content-Type':'application/json','X-Bracket':'1'}, body: body === undefined ? undefined : JSON.stringify(body) }).then(r=>r.json());
+const log = (kind, payload, sentence_id) => api('/api/event', {kind, payload, sentence_id}).catch(()=>{});
+const now = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sid = () => Math.random().toString(36).slice(2, 12);
+const secs = ms => (ms/1000).toFixed(1) + ' s';
+// Brackets: unsettled wording kept in the text itself, diplomatic style: "[shall / should]". One alternative alone is
+// a placeholder or a contested term. Stored as plain text, so history, undo, export and the models all see it.
+const BRACKET = /\[([^\[\]]*)\]/g, SEP = ' / ';
+function bracketsIn(text){
+  const out = []; let m; BRACKET.lastIndex = 0;
+  while ((m = BRACKET.exec(text))){
+    const start = m.index, end = start + m[0].length, alts = []; let pos = start + 1;
+    m[1].split(SEP).forEach(a => { alts.push({ text: a, start: pos, end: pos + a.length }); pos += a.length + SEP.length; });
+    out.push({ start, end, alts });
+  }
+  return out;
+}
+const bracketAt = (text, off) => bracketsIn(text).find(b => off >= b.start && off <= b.end);
+const KEYS_SPAN = kb('1–9 pick · A agreed language · ⇥ next · ↵ accept · ⇧↵ keep as alternative · B add alternative · ←→ weaker / stronger · ↑↓ length · R register · C Claude · esc');
+const KEYS_SENT = kb('1–9 pick · A agreed language · ⇥ next · ↵ accept · ⇧↵ keep as alternative · ←→ weaker / stronger · ↑↓ length · R register · C Claude · esc');
+// one proposal per line, without list numbering, bullets, quotes or a reasoning model's <think> preamble (mirrors prompts.parse_lines)
+function parseLines(text, n){
+  const out = [];
+  text.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').split('\n').forEach(line => {
+    const t = line.trim().replace(/^["•\-–*\s]+|["\s]+$/g, '').replace(/^\d{1,2}[.)]\s+/, '').trim();
+    if (t && !out.includes(t)) out.push(t);
+  });
+  return out.slice(0, n);
+}
+const KEYS_BRACKET = kb('↑↓ choose · ↵ settle on this wording · B add alternative · X drop · esc');
+
+/* ---------------- setup ---------------- */
+function setV(el, text, cls, detail){ el.className = 'v' + (cls ? ' ' + cls : ''); el.innerHTML = esc(text) + (detail ? `<small>${esc(detail)}</small>` : ''); }
+const gb = b => (b / 1e9).toFixed(1) + ' GB';
+async function loadStatus(){
+  try{
+    const st = await fetch('/api/status').then(r=>r.json()); S.status = st;
+    if (document.activeElement !== $('#docTitle')) $('#docTitle').textContent = st.title || '';
+    titleChanged();
+    $('#brandOrg').hidden = !st.org; $('#brandOrg').textContent = st.org || '';
+    setV($('#stLex'), st.lexicon.ok ? `Ready · ${st.lexicon.entries.toLocaleString()} entries` : 'Missing', st.lexicon.ok ? '' : 'bad');
+    renderLibrary(st.library || {});
+    setV($('#stLog'), `Logging · ${st.session}`, '', `Saved on this computer in ${st.data_dir}`);
+    $('#setupSession').textContent = `${st.session} · v${st.version}`;
+    updateBeginLabel();
+    refreshLocal(true); checkCloud();
+  }catch(e){ setV($('#stLog'), 'Server unreachable', 'bad', 'Is bracket still running? Open it again from your Applications or Start menu.'); }
+}
+
+// ---- local model: choose, download, load, test ----
+let modelPoll = null;
+async function refreshLocal(test){
+  const m = await fetch('/api/models').then(r=>r.json()).catch(() => null);
+  if (!m) return;
+  S.models = m;
+  const running = m.models.find(x => x.download && ['running','verifying'].includes(x.download.state));
+  const engine = m.local_engine, est = m.engine.state;
+  clearTimeout(modelPoll);
+  if (engine !== 'builtin'){ if (test) checkLocal(); return; }
+  if (running){ renderDownload(m, running); modelPoll = setTimeout(() => refreshLocal(true), 1000); return; }
+  if (est === 'no-binary'){ setV($('#stLocal'), 'Built-in engine not available', 'bad', 'This copy of bracket runs from source without llama.cpp. Choose Ollama or another local server in Settings, or use the packaged app.'); return; }
+  if (est === 'no-model'){ renderModelChoice(m); return; }
+  if (est === 'starting'){ setV($('#stLocal'), `Loading ${m.chosen || 'the model'}…`, 'wait', 'The first load reads the whole model from disk: from a few seconds to a minute.'); modelPoll = setTimeout(() => refreshLocal(true), 1500); return; }
+  if (test) checkLocal();
+}
+function renderModelChoice(m, note){
+  const el = $('#stLocal'); el.className = 'v';
+  const vis = m.models.filter(x => !x.hidden);
+  const pick = S.pickModel || (vis.find(x => x.recommended) || vis[0]).id;
+  S.pickModel = pick;
+  const failed = m.models.find(x => x.download && x.download.state === 'failed');
+  el.innerHTML = `Choose a model to run on this computer<small>Downloaded once from Hugging Face (Apache-2.0, no account needed), then everything runs offline. This computer has ${m.ram_gb ? m.ram_gb.toFixed(0) + ' GB of memory' : 'an unknown amount of memory'} and ${m.free_gb.toFixed(0)} GB free on disk.</small>` +
+    `<div class="mlist">${vis.map(x => `<label class="mrow${x.id === pick ? ' on' : ''}${x.bytes / 1e9 + 0.2 > m.free_gb && !x.installed ? ' dis' : ''}"><input type="radio" name="mdl" value="${x.id}"${x.id === pick ? ' checked' : ''}><span><span class="ml">${esc(x.label)} · ${gb(x.bytes)}</span><span class="mm">${esc(x.note)}</span></span><span class="mr">${x.installed ? 'Downloaded' : x.recommended ? 'Recommended here' : ''}</span></label>`).join('')}</div>` +
+    `<div class="inline"><button class="small-btn solid" id="dlBtn">Download ${esc((vis.find(x => x.id === pick) || {}).label || '')}</button><span class="muted">${note ? esc(note) : failed ? 'Last attempt: ' + esc(failed.download.error || 'failed') : 'You can switch models later in Settings.'}</span></div>`;
+  el.querySelectorAll('input[name=mdl]').forEach(r => r.addEventListener('change', () => { S.pickModel = r.value; renderModelChoice(m); }));
+  $('#dlBtn').addEventListener('click', async () => {
+    $('#dlBtn').disabled = true;
+    const x = m.models.find(y => y.id === S.pickModel);
+    const res = x.installed ? await api(`/api/models/${x.id}/use`) : await api(`/api/models/${x.id}/download`);
+    if (res.ok === false){ renderModelChoice(m, res.error); return; }
+    refreshLocal(true);
+  });
+}
+function renderDownload(m, x){
+  const d = x.download, pct = d.total ? 100 * d.done / d.total : 0;
+  const left = d.rate ? Math.max(0, (d.total - d.done) / d.rate) : null;
+  const eta = left == null ? '' : left > 90 ? ` · about ${Math.round(left / 60)} min left` : ` · under ${Math.max(1, Math.ceil(left / 10) * 10)} s left`;
+  const el = $('#stLocal'); el.className = 'v';
+  el.innerHTML = (d.state === 'verifying' ? `Checking ${esc(x.label)}…` : `Downloading ${esc(x.label)}`) +
+    `<small>${gb(d.done)} of ${gb(d.total)}${d.rate ? ' · ' + (d.rate / 1e6).toFixed(0) + ' MB/s' : ''}${eta}${d.error ? ' · ' + esc(d.error) : ''}. You can keep setting up meanwhile; closing bracket pauses the download, and it resumes next time.</small>` +
+    `<div class="dl"><div class="dlbar"><i style="width:${pct.toFixed(1)}%"></i></div><div><button class="small-btn" id="dlCancel">Cancel</button></div></div>`;
+  $('#dlCancel').addEventListener('click', async () => { await api(`/api/models/${x.id}/cancel`); setTimeout(() => refreshLocal(false), 400); });
+}
+// a real round trip, so "ready" means the model answers, not only that it is configured
+async function checkLocal(retry = 1){
+  setV($('#stLocal'), 'Testing…', 'wait');
+  const c = await fetch('/api/local/check').then(r=>r.json()).catch(e=>({ ok:false, error:String(e) }));
+  if (!c.ok && retry && c.state !== 'no-model' && c.state !== 'no-binary'){ await new Promise(r => setTimeout(r, 3000)); return checkLocal(retry - 1); }
+  if (S.status) S.status.local = { ...S.status.local, ok: c.ok, model: c.model };
+  if (c.ok) setV($('#stLocal'), `Ready · ${c.model} · ${secs(c.ms)}`, '', `${c.engine === 'builtin' ? 'Built in · runs on this computer' : c.engine === 'ollama' ? 'Ollama' : 'Local server'} · begin → ${(c.sample||[]).join(', ')}`);
+  else if (c.state === 'no-model' || c.state === 'no-binary') refreshLocal(false);
+  else setV($('#stLocal'), `${c.error || 'Not working'}${c.model ? ' · ' + c.model : ''}`, 'bad', c.detail || 'Settings lets you choose another model or engine.');
+}
+
+// ---- Claude: optional; a key typed here is saved on this computer ----
+async function checkCloud(){
+  const st = S.status && S.status.cloud; const el = $('#stCloud');
+  if (st && !st.ok){
+    if (st.error === 'no key'){
+      el.className = 'v';
+      el.innerHTML = `Off · optional<small>bracket works fully offline. Add an Anthropic API key to offer Claude's proposals when the facilitator presses C; only the sentence being worked on is sent, and only then.</small><div class="inline"><input class="field" id="keyIn" type="password" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" spellcheck="false"><button class="small-btn" id="keySave">Save</button></div>`;
+      const save = async () => { const v = $('#keyIn').value.trim(); if (!v) return; await api('/api/settings', { cloud_key: v, cloud_api: 'anthropic' }); loadStatus(); };
+      $('#keySave').addEventListener('click', save); $('#keyIn').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); save(); } });
+      return;
+    }
+    setV(el, st.error === 'cloud off' ? 'Off' : 'Not set up', st.error === 'cloud off' ? 'wait' : 'bad', st.detail || ''); return;
+  }
+  setV(el, `Testing · ${st ? st.model : ''}`, 'wait', st ? `${st.api} · ${st.gateway}` : '');
+  const c = await fetch('/api/cloud/check').then(r=>r.json()).catch(e=>({ ok:false, error:String(e) }));
+  if (S.status) S.status.cloud.ok = !!c.ok;
+  if (c.ok) setV(el, `Ready · ${c.model} · ${secs(c.ms)}`, '', `${st.api} · ${st.gateway}${c.plain ? ' · gateway ignores the speed settings' : ''} · change or remove the key in Settings`);
+  else setV(el, 'Failed', 'bad', (c.error || c.detail || 'unknown error').slice(0, 220) + ' · check the key in Settings');
+}
+$('#testLocal').addEventListener('click', () => refreshLocal(true));
+$('#testCloud').addEventListener('click', checkCloud);
+
+// ---- agreed language: shipped with the app; fetchable here when running from source ----
+let libPoll = null;
+function renderLibrary(lb){
+  const el = $('#stLib'); clearTimeout(libPoll);
+  const job = lb.job || {};
+  if (job.state === 'running'){
+    el.className = 'v wait'; el.innerHTML = `Downloading the starter library…<small>${esc((job.log || []).slice(-1)[0] || 'starting')}</small>`;
+    libPoll = setTimeout(async () => renderLibrary(await fetch('/api/library').then(r=>r.json())), 1200); return;
+  }
+  if (lb.ok){
+    if (S.status) S.status.library = lb;
+    setV(el, `Ready · ${lb.docs} documents${lb.bodies && lb.bodies.length ? ' · ' + lb.bodies.join(', ') : ''}`, '', 'Precedents are quoted exactly, with their source. Add your own documents in Settings.' + (job.state === 'done' && job.failed ? ` · ${job.failed} source${job.failed > 1 ? 's' : ''} could not be fetched` : ''));
+    return;
+  }
+  el.className = 'v';
+  el.innerHTML = `Not downloaded<small>The starter library: 33 adopted NATO, EU, G7 and G20 texts, 2014–2026, fetched from the publishers' sites (a few MB).</small><div class="inline"><button class="small-btn" id="libBtn">Download</button></div>`;
+  $('#libBtn').addEventListener('click', async () => { await api('/api/library/fetch'); renderLibrary(await fetch('/api/library').then(r=>r.json())); });
+}
+
+// ---- settings ----
+const CLAUDE_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'];
+async function openSettings(){
+  const box = $('#settings');
+  if (!box.hidden){ box.hidden = true; $('#settingsBtn').textContent = 'Settings'; return; }
+  const [{ settings: st, file }, m] = await Promise.all([fetch('/api/settings').then(r=>r.json()), fetch('/api/models').then(r=>r.json())]);
+  const v = k => st[k].value, lock = k => st[k].source.startsWith('env:') ? `<span class="locked">set by ${esc(st[k].source.slice(4))}</span>` : '';
+  const dis = k => st[k].source.startsWith('env:') ? ' disabled' : '';
+  const input = (k, ph = '') => `<input class="field" data-k="${k}" value="${esc(v(k))}" placeholder="${esc(ph)}"${dis(k)}>`;
+  const select = (k, opts) => `<select class="field" data-k="${k}"${dis(k)}>${opts.map(([val, lab]) => `<option value="${esc(val)}"${val === v(k) ? ' selected' : ''}>${esc(lab)}</option>`).join('')}</select>`;
+  const cm = CLAUDE_MODELS.includes(v('cloud_model')) ? CLAUDE_MODELS : [...CLAUDE_MODELS, v('cloud_model')];
+  const inst = m.models.filter(x => x.installed);
+  box.innerHTML = `
+  <div><h3>Local model</h3><div class="sgrid">
+    <label>Engine</label><div>${select('local_engine', [['builtin','Built in (llama.cpp, recommended)'],['ollama','Ollama, running on this computer'],['openai','Another local server (OpenAI-compatible)'],['off','Off']])} ${lock('local_engine')}</div>
+    <label>Model name</label><div>${input('local_model', 'built in: chosen below · Ollama: e.g. gemma4:e4b')} ${lock('local_model')}</div>
+    <div class="note">For Ollama or another server: the model's name there. For the built-in engine, leave it to the list below.</div>
+    <label>Server address</label><div>${input('local_url', 'Ollama: http://127.0.0.1:11434 · LM Studio: http://127.0.0.1:1234/v1')} ${lock('local_url')}</div>
+    <label>Models on this computer</label><div class="muted">${inst.length ? inst.map(x => `${esc(x.label)} · ${gb(x.bytes)} <button class="small-btn" data-use="${x.id}">Use</button> <button class="small-btn" data-del="${x.id}">Delete</button>`).join('<br>') : 'None yet.'}<br>Others: ${m.models.filter(x => !x.installed && !x.hidden).map(x => `<button class="small-btn" data-dl="${x.id}">${esc(x.label)} · ${gb(x.bytes)}</button>`).join(' ')}<br>Stored in <code>${esc(m.dir)}</code></div>
+    <label>Your own GGUF file</label><div>${input('local_model_path', 'a full path to a .gguf file (optional)')} ${lock('local_model_path')}</div>
+  </div></div>
+  <div><h3>Claude (optional)</h3><div class="sgrid">
+    <label>Route</label><div>${select('cloud_api', [['anthropic','Anthropic API'],['bedrock-gateway','An organization gateway in front of AWS Bedrock'],['off','Off: nothing leaves this computer']])} ${lock('cloud_api')}</div>
+    <label>API key</label><div><input class="field" data-k="cloud_key" type="password" placeholder="${st.cloud_key.value.set ? 'saved ' + esc(st.cloud_key.value.hint) + ' · type to replace' : 'sk-ant-…'}"${dis('cloud_key')}> ${st.cloud_key.value.set && !dis('cloud_key') ? '<button class="small-btn" id="keyDel">Remove key</button>' : ''} ${lock('cloud_key')}</div>
+    <label>Model</label><div><select class="field" data-k="cloud_model"${dis('cloud_model')}>${cm.map(x => `<option${x === v('cloud_model') ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> ${lock('cloud_model')}</div>
+    <label>Gateway base URL</label><div>${input('cloud_base_url', 'only for a proxy or an organization gateway')} ${lock('cloud_base_url')}</div>
+    <label>Gateway sends the key as</label><div>${select('cloud_auth', [['key','x-api-key header'],['bearer','Authorization: Bearer']])} ${input('cloud_key_header', 'or a header name of its own')}</div>
+    <label>Fetch Claude ahead</label><div>${select('claude_prefetch', [['false','No: ask only on C'],['true','Yes: faster, but a request for every opened word']])}</div>
+  </div></div>
+  <div><h3>The room</h3><div class="sgrid">
+    <label>Label under the mark</label><div>${input('org', 'e.g. your organization (optional)')}</div>
+  </div></div>
+  <div><h3>Add a document to the library</h3><div class="sgrid">
+    <label>File (PDF, HTML, text)</label><div><input class="field" type="file" id="docFile" accept=".pdf,.html,.htm,.txt,.md"></div>
+    <label>Body · title · date</label><div class="inline" style="margin:0"><input class="field" id="docBody" placeholder="e.g. UN" size="8"><input class="field" id="docTitle2" placeholder="Title" size="28"><input class="field" id="docDate" type="date"><button class="small-btn" id="docAdd">Add</button></div>
+    <div class="note" id="docNote">Its paragraphs are quoted exactly, never rewritten.</div>
+  </div></div>
+  <div class="inline"><button class="small-btn solid" id="setSave">Save settings</button><button class="small-btn" id="quitBtn">Quit bracket</button><span class="muted">Saved to <code>${esc(file)}</code>. API: <code>${location.origin}/docs</code></span></div>`;
+  box.hidden = false; $('#settingsBtn').textContent = 'Close settings';
+  box.querySelectorAll('[data-use]').forEach(b => b.addEventListener('click', async () => { await api(`/api/models/${b.dataset.use}/use`); refreshLocal(true); box.hidden = true; openSettings(); }));
+  box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Delete this model from this computer?')) return; await api(`/api/models/${b.dataset.del}`, undefined, 'DELETE'); refreshLocal(false); box.hidden = true; openSettings(); }));
+  box.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', async () => { const r = await api(`/api/models/${b.dataset.dl}/download`); if (r.ok === false) alert(r.error); box.hidden = true; $('#settingsBtn').textContent = 'Settings'; refreshLocal(true); }));
+  if ($('#keyDel')) $('#keyDel').addEventListener('click', async () => { await api('/api/settings', { cloud_key: '' }); box.hidden = true; openSettings(); loadStatus(); });
+  $('#setSave').addEventListener('click', async () => {
+    const ch = {};
+    box.querySelectorAll('[data-k]').forEach(el => { if (el.disabled) return; const k = el.dataset.k; const val = el.value.trim();
+      if (k === 'cloud_key'){ if (val) ch[k] = val; return; }
+      const cur = String(v(k)); if (val !== cur) ch[k] = val; });
+    const r = await api('/api/settings', ch);
+    if (r.error){ alert(r.error); return; }
+    box.hidden = true; $('#settingsBtn').textContent = 'Settings'; loadStatus();
+  });
+  $('#docAdd').addEventListener('click', async () => {
+    const f = $('#docFile').files[0]; const body = $('#docBody').value.trim(), title = $('#docTitle2').value.trim(), date = $('#docDate').value;
+    if (!f || !body || !title || !date){ $('#docNote').textContent = 'Choose a file and fill in the body, title and date.'; return; }
+    $('#docNote').textContent = 'Reading…';
+    const q = new URLSearchParams({ name: f.name, body, title, date });
+    const r = await fetch('/api/library/add?' + q, { method: 'POST', headers: { 'X-Bracket': '1' }, body: f }).then(x => x.json()).catch(e => ({ ok: false, error: String(e) }));
+    $('#docNote').textContent = r.ok ? `Added: ${r.paragraphs} paragraphs.` : (r.error || 'Could not read it');
+    if (r.ok) loadStatus();
+  });
+  $('#quitBtn').addEventListener('click', async () => { if (!confirm('Quit bracket? The draft and the log are already saved.')) return; await api('/api/shutdown'); document.body.innerHTML = '<p style="font-family:var(--serif);font-size:28px;padding:20vh 10vw;color:#fff">bracket has quit. You can close this tab.</p>'; });
+}
+$('#settingsBtn').addEventListener('click', openSettings);
+
+// what the pasted draft will become, before the room sees it
+let seedT;
+$('#seed').addEventListener('input', () => { updateBeginLabel(); clearTimeout(seedT); seedT = setTimeout(previewSeed, 400); });
+async function previewSeed(){
+  const text = $('#seed').value; if (!text.trim()){ $('#seedInfo').textContent = ''; return; }
+  const r = await api('/api/segment', { text, structured: true }).catch(() => null); if (!r) return;
+  const blocks = r.sentences.filter(s => s.brk).length, heads = r.sentences.filter(s => s.kind === 'h').length, items = r.sentences.filter(s => s.kind === 'li' && s.brk).length;
+  $('#seedInfo').textContent = `${r.sentences.length} sentences in ${blocks} blocks` + (heads ? ` · ${heads} heading${heads>1?'s':''}` : '') + (items ? ` · ${items} list item${items>1?'s':''}` : '');
+}
+// ⌘↵ and the white button do the likely thing: start from a pasted draft, else resume the saved one, else start empty.
+// Starting empty over a saved draft is the deliberate, secondary choice.
+function primaryAction(){ return $('#seed').value.trim() ? 'seed' : (S.status && S.status.resumable ? 'resume' : 'empty'); }
+function updateBeginLabel(){
+  const n = S.status ? S.status.resumable : 0, act = primaryAction();
+  const label = { seed: 'Begin with this draft ', resume: `Resume · ${n} sentence${n===1?'':'s'} `, empty: 'Begin live session ' }[act];
+  $('#beginBtn').firstChild.textContent = label;
+  $('#resumeBtn').hidden = !n;
+  $('#resumeBtn').textContent = act === 'resume' ? 'Begin an empty table' : `Resume · ${n} sentence${n===1?'':'s'}`;
+}
+// the session's title: typed on the setup screen, saved with the draft, shown in the live header and the export
+const docTitle = () => $('#docTitle').innerText.replace(/\s+/g, ' ').trim().slice(0, 80);
+function titleChanged(){ const t = docTitle(); document.title = t ? `[bracket] ${t}` : '[bracket]'; }
+$('#docTitle').addEventListener('input', () => { if (!docTitle()) $('#docTitle').textContent = ''; titleChanged(); });   // empty again shows the placeholder
+$('#docTitle').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('#seed').focus(); } });
+$('#beginBtn').addEventListener('click', () => begin(primaryAction()));
+$('#resumeBtn').addEventListener('click', () => begin(primaryAction() === 'resume' ? 'empty' : 'resume'));
+$('#seed').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); begin(primaryAction()); } });
+function fullscreen(){ if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); }
+
+async function begin(how){
+  const snap = await fetch('/api/snapshot').then(r=>r.json()).catch(()=>({doc:null}));
+  const hadDraft = !!(snap.doc && snap.doc.sentences && snap.doc.sentences.length);
+  if (how === 'resume' && hadDraft){ S.doc = snap.doc; }
+  else {
+    if (hadDraft) log('snapshot.replaced', { doc: snap.doc });
+    const text = $('#seed').value;
+    if (how === 'seed'){
+      const r = await api('/api/segment', { text, structured: true });
+      S.doc = { sentences: r.sentences.map(s => ({ ...s, history:[{version:1,text:s.text,at:now(),via:'seed'}], dissents:[] })) };
+    } else {
+      S.doc = { sentences: [{ id: sid(), text: '', state: 'draft', version: 1, kind: 'p', label: null, brk: true, history: [], dissents: [] }] };
+    }
+  }
+  S.doc.title = docTitle();
+  S.undo = []; S.redo = []; S.live = true; S.mode = 'rest';
+  log('session.begin', { how, sentences: S.doc.sentences.length, title: S.doc.title });
+  $('#headTitle').textContent = `${S.doc.title || 'Untitled session'} · ${S.status ? S.status.session : ''}`;
+  $('#setup').classList.add('gone'); $('#ended').textContent = '';
+  closeAll(false); render(); snapshot();
+  setTimeout(() => focusSentence(S.doc.sentences[0].id, 'end'), 380);
+}
+async function endSession(){
+  $('#confirm').classList.remove('on'); S.mode = 'rest';
+  flushTyping(); closeAll(false);
+  await new Promise(r => { clearTimeout(snapT); api('/api/snapshot', { doc: S.doc }).then(r, r); });
+  const n = S.doc.sentences.length, a = S.doc.sentences.filter(s => s.state === 'agreed').length;
+  log('session.end', { sentences: n, agreed: a });
+  await exportRecord();
+  S.live = false; document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  $('#table').innerHTML = '';
+  $('#setup').classList.remove('gone'); $('#seed').value = ''; $('#seedInfo').textContent = '';
+  $('#ended').textContent = `Session ended ${now()} · ${a} of ${n} agreed · record saved to Downloads`;
+  loadStatus();
+}
+// save the statement with its record, and the event log, without typing a URL in front of the room
+async function exportRecord(){
+  await new Promise(r => { clearTimeout(snapT); api('/api/snapshot', { doc: S.doc }).then(r, r); });
+  for (const [fmt, ext] of [['md','md'], ['json','json']]){
+    const text = await fetch('/api/export?fmt=' + fmt).then(r => r.text());
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text])); a.download = `bracket-${(S.doc.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'session'}-${S.status ? S.status.session : ''}.${ext}`; a.click(); URL.revokeObjectURL(a.href);
+  }
+  log('export', {}); hint('Saved the statement (.md) and the event log (.json) to Downloads', true);
+}
+loadStatus();
+window.addEventListener('error', e => { log('client.error', { message: e.message, at: `${(e.filename || '').split('/').pop()}:${e.lineno}` }); if (S.live) hint(`Something went wrong: ${e.message}`, true); });
+window.addEventListener('unhandledrejection', e => { log('client.error', { message: String(e.reason) }); if (S.live) hint(`Something went wrong: ${String(e.reason).slice(0, 120)}`, true); });
+
+/* ---------------- document model ---------------- */
+function sentence(id){ return S.doc.sentences.find(s => s.id === id); }
+function idx(id){ return S.doc.sentences.findIndex(s => s.id === id); }
+function pushUndo(){ S.undo.push(JSON.stringify(S.doc)); if (S.undo.length > 200) S.undo.shift(); S.redo = []; }
+// Typing reaches the document model only on blur; commit it first so undo reverts it rather than losing it.
+function flushTyping(){
+  const p = document.activeElement?.closest?.('p.sent'); if (!p) return; const s = sentence(p.dataset.id); if (!s) return;
+  const text = p.innerText.replace(/\n+$/,''); const last = s.history.length ? s.history[s.history.length-1].text : '';
+  if (text !== last){ s.text = last; commitText(s.id, text, 'typed'); }
+}
+function undo(){ flushTyping(); clearTimeout(editT); if (!S.undo.length) return; S.redo.push(JSON.stringify(S.doc)); S.doc = JSON.parse(S.undo.pop()); closeAll(); render(); snapshot(); log('undo', {}); }
+function redo(){ clearTimeout(editT); if (!S.redo.length) return; S.undo.push(JSON.stringify(S.doc)); S.doc = JSON.parse(S.redo.pop()); closeAll(); render(); snapshot(); log('redo', {}); }
+let snapT; function snapshot(){ clearTimeout(snapT); snapT = setTimeout(() => api('/api/snapshot', { doc: S.doc }).catch(()=>{}), 500); }
+
+function commitText(id, text, via){
+  const s = sentence(id); if (!s || s.text === text) return;
+  pushUndo();
+  s.version += 1; s.text = text; s.history.push({ version: s.version, text, at: now(), via });
+  if (s.state === 'agreed') s.state = 'draft';
+  log('edit', { via, text, version: s.version }, id);
+  snapshot();
+}
+
+/* ---------------- render ---------------- */
+// Removing the focused sentence fires focusout synchronously (Chromium), which would re-commit the stale DOM text
+// over whatever render() is showing (an undo, an accepted proposal). focusout ignores events while this is set.
+let rendering = false;
+function render(){
+  if (!S.live) return;
+  // rebuilding the table drops keyboard focus; put the caret back so the facilitator can keep typing after ⇧↵, ⌥O, undo
+  const act = document.activeElement?.closest?.('p.sent'); const keep = act ? { id: act.dataset.id, off: caretOffset(act) } : null;
+  rendering = true; try { renderTable(); } finally { rendering = false; }
+  if (keep && S.mode !== 'dissent'){ const np = pEl(keep.id); if (np){ np.focus({ preventScroll: true }); setCaret(np, Math.min(keep.off, np.innerText.length)); } }
+}
+function gutHTML(s){
+  const num = s.kind === 'li' && s.brk && s.label ? `<span class="num">${esc(s.label)}</span>` : '';
+  const mk = s.state === 'agreed' ? `<span class="mk agreed caps">Agreed</span>` : s.state === 'open' ? `<span class="mk open caps">Open</span>` : (s.version > 1 ? `<span class="mk v caps">v${s.version}</span>` : '');
+  const dis = s.dissents.length ? `<span class="mk v caps">${s.dissents.length} dissent${s.dissents.length>1?'s':''}</span>` : '';
+  const nb = bracketsIn(s.text || '').length;
+  const brk = nb ? `<span class="mk brk caps">${nb} bracket${nb>1?'s':''}</span>` : '';
+  return `<span class="bar" aria-hidden="true"></span>${num}${mk}${brk}${dis}`;
+}
+function rowClass(s){ return `row ${s.state} ${s.kind || 'p'}${s.brk !== false ? ' brk' : ''}${s.id === S.focusId ? ' focus' : ''}`; }
+// state and version labels only, leaving the sentence's DOM (and any selection being made in the room) alone
+function refreshRow(id){
+  const row = document.querySelector(`.row[data-id="${id}"]`); const s = sentence(id); if (!row || !s) return;
+  row.className = rowClass(s); row.querySelector('.gut').innerHTML = gutHTML(s); readout();
+}
+function renderTable(){
+  const t = $('#table'); const prevScroll = $('#scroll').scrollTop;
+  t.innerHTML = '';
+  S.doc.sentences.forEach(s => {
+    const row = document.createElement('div'); row.className = rowClass(s); row.dataset.id = s.id;
+    const gut = document.createElement('div'); gut.className = 'gut'; gut.innerHTML = gutHTML(s);
+    const body = document.createElement('div'); body.className = 'body';
+    if (s.kind === 'p' && s.brk && s.label){ const l = document.createElement('div'); l.className = 'lead caps'; l.textContent = s.label; body.appendChild(l); }
+    const p = document.createElement('p'); p.className = 'sent'; p.contentEditable = true; p.spellcheck = false; p.dataset.id = s.id;
+    p.innerHTML = decorate(s);
+    if (!s.text) p.setAttribute('data-empty', '1');
+    body.appendChild(p);
+    const extra = renderExtras(s); if (extra) body.appendChild(extra);
+    row.appendChild(gut); row.appendChild(body); t.appendChild(row);
+  });
+  // clearing the table clamps the scroll; put it back, and finish any smooth scroll the rebuild interrupted
+  const sc = $('#scroll'); if (sc.scrollTop !== prevScroll) sc.scrollTop = prevScroll;   // assigning it would stop a smooth scroll
+  if (S.scrollTo != null && Math.abs(sc.scrollTop - S.scrollTo) > 2) sc.scrollTo({ top: S.scrollTo, behavior: 'smooth' });
+  readout();
+}
+function decorate(s){
+  // one class list per character, then runs of equal classes become spans; the text content stays exactly s.text
+  const txt = s.text || ''; const cls = Array.from({ length: txt.length }, () => []);
+  const r = S.rail && S.rail.id === s.id ? S.rail : null;
+  bracketsIn(txt).forEach(b => {
+    for (let i = b.start; i < b.end; i++) cls[i].push('bk');
+    b.alts.forEach((a, k) => { const cur = r && r.kind === 'bracket' && r.start === b.start && k === r.cur;
+      for (let i = a.start; i < a.end; i++){ cls[i] = cls[i].filter(c => c !== 'bk'); cls[i].push('alt'); if (cur) cls[i].push('altcur'); } });
+  });
+  const h = S.hover && S.hover.id === s.id ? S.hover : null;
+  const m = r && r.kind !== 'bracket' && r.start != null ? r : h;
+  if (m) for (let i = m.start; i < m.end && i < txt.length; i++) cls[i].push(m === h ? 'hov' : 'sel');
+  let out = '', run = '', key = null;
+  for (let i = 0; i <= txt.length; i++){
+    const k = i < txt.length ? cls[i].join(' ') : null;
+    if (k !== key){ if (run) out += key ? `<span class="${key}">${esc(run)}</span>` : esc(run); run = ''; key = k; }
+    if (i < txt.length) run += txt[i];
+  }
+  return out;
+}
+function renderExtras(s){
+  const wrap = document.createElement('div'); wrap.className = 'extras';
+  let any = false;
+  if (S.hover && S.hover.id === s.id){
+    const h = S.hover; const d = document.createElement('div'); d.className = 'syn';
+    const opts = h.opts.length ? h.opts.map((o, i) => `<span class="${i===h.pick?'pick':''}" data-i="${i}">${esc(o)}</span>`).join('<span class="dot" aria-hidden="true">·</span>') : `<span style="color:var(--ghost)">no entries</span>`;
+    d.innerHTML = `<div class="opts">${opts}</div><span class="caps" style="font-size:9.5px;color:var(--brass);white-space:nowrap">Lexical · ${h.ms ?? '–'} ms</span>`;
+    d.querySelectorAll('.opts span[data-i]').forEach(el => el.addEventListener('mousedown', e => { e.preventDefault(); h.pick = +el.dataset.i; applyHover(); }));
+    wrap.appendChild(d); any = true;
+  }
+  if (S.rail && S.rail.id === s.id && S.rail.kind === 'bracket'){
+    const r = S.rail; const panel = document.createElement('div'); panel.className = 'brkpanel extras';
+    panel.innerHTML = `<div class="dials"><div class="d"><span class="caps" style="font-size:10.5px;color:var(--brk)">In brackets</span><span class="r caps">${r.alts.length === 1 ? 'one wording · add an alternative or settle it' : r.alts.length + ' alternatives · settle on one when the room agrees'}</span></div></div>`;
+    const rail = document.createElement('div'); rail.className = 'rail';
+    r.alts.forEach((a, i) => {
+      const d = document.createElement('div'); d.className = 'slot' + (i === r.cur ? ' cur' : '');
+      d.innerHTML = `<p>${esc(a) || '<span style="color:var(--ghost)">(empty)</span>'}</p><span class="caps">${i === r.cur ? '↵ settle' : ''}</span>`;
+      d.addEventListener('mousedown', e => { e.preventDefault(); r.cur = i; settleBracket(); });
+      rail.appendChild(d);
+    });
+    panel.appendChild(rail);
+    if (r.adding){ const d = document.createElement('div'); d.innerHTML = `<input class="inline-input" id="altIn" placeholder="Alternative wording, then return">`; panel.appendChild(d); setTimeout(() => $('#altIn') && $('#altIn').focus(), 0); }
+    else { const add = document.createElement('div'); add.className = 'addalt caps'; add.textContent = '+ Add alternative · B'; add.addEventListener('mousedown', e => { e.preventDefault(); r.adding = true; render(); }); panel.appendChild(add); }
+    wrap.appendChild(panel); any = true;
+  }
+  else if (S.rail && S.rail.id === s.id){
+    const r = S.rail;
+    if (r.start != null){ const add = document.createElement('div'); add.className = 'addalt caps'; add.textContent = `+ Add alternative to “${r.source.length > 40 ? r.source.slice(0, 40) + '…' : r.source}” · B`; add.addEventListener('mousedown', e => { e.preventDefault(); bracketize(r.id, r.start, r.end); }); wrap.appendChild(add); }
+    const dl = document.createElement('div'); dl.className = 'dials';
+    const ladder = r.ladder ? r.ladder.rungs.map((x, i) => `<span class="r caps ${i===r.ladder.current+r.dials.strength?'cur':''}">${esc(x)}</span>`).join('') : `<span class="v caps">${['weaker','same','stronger','much stronger'][r.dials.strength+1] || 'same'}</span>`;
+    dl.innerHTML = `<div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Strength ←→</span>${ladder}</div><div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Register</span><span class="v caps">${r.dials.register}</span></div><div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Length ↑↓</span><span class="v caps">${r.dials.length}</span></div>` +
+      (r.start == null ? `<div class="d"><span class="r caps">Whole sentence · reword only · no new claims</span></div>` : '');
+    wrap.appendChild(dl);
+    // a tier that failed says why, in place, instead of its cells just staying empty
+    ['local', 'cloud'].forEach(t => { if (r.err && r.err[t] && (t === 'local' || r.round > 0)){ const d = document.createElement('div'); d.className = 'tiererr caps'; d.textContent = `${t === 'local' ? 'Local' : 'Claude'} · ${r.err[t]}`; wrap.appendChild(d); } });
+    const ag = renderAgreed(r); if (ag) wrap.appendChild(ag);
+    wrap.appendChild(renderGrid(r));
+    any = true;
+  }
+  if (S.showHist === s.id){
+    const d = document.createElement('div'); d.className = 'hist caps';
+    d.innerHTML = `<span>History</span>` + s.history.map((h, i) => `<span class="${i===s.history.length-1?'now':''}">v${h.version} ${h.at}${h.via && h.via!=='seed' ? ' · '+esc(h.via) : ''}</span>`).join('<span>→</span>') +
+      s.dissents.map(d => `<span class="dis">Dissent v${d.version} · ${esc(d.who)}: ${esc(d.note)}</span>`).join('');
+    wrap.appendChild(d); any = true;
+  }
+  if (S.mode === 'dissent' && S.focusId === s.id){
+    const d = document.createElement('div'); d.innerHTML = `<input class="inline-input" id="dissentIn" placeholder="Name — one line of dissent, then return">`;
+    wrap.appendChild(d); any = true; setTimeout(() => $('#dissentIn') && $('#dissentIn').focus(), 0);
+  }
+  return any ? wrap : null;
+}
+// Agreed language: up to three precedent sentences from the library, quoted exactly with their source. For a span,
+// the precedent's words that line up with it are brass, and ↵ puts them in place of the stretch they replace.
+function renderAgreed(r){
+  const a = r.agreed; if (!a || a.wait) return null;
+  const box = document.createElement('div'); box.className = 'agreed';
+  if (!a.hits.length){ box.innerHTML = `<div class="none caps">Agreed language · no precedent in the library</div>`; return box; }
+  const s = sentence(r.id);
+  box.innerHTML = `<div class="head caps">Agreed language · A</div>`;
+  a.hits.forEach((h, i) => {
+    const d = document.createElement('div'); d.className = 'prec' + (r.focus === 'agreed' && i === r.acur ? ' cur' : '');
+    const txt = h.phrase != null ? esc(h.text.slice(0, h.pstart)) + `<span class="ph">${esc(h.phrase)}</span>` + esc(h.text.slice(h.pend)) : esc(h.text);
+    const what = h.same ? '<b>the drafted wording is agreed language</b>'
+      : h.phrase != null ? `<b>for “${esc(s.text.slice(h.rstart, h.rend))}”</b>` : (r.start == null ? '' : 'reference');
+    const c = h.cites[0];
+    d.innerHTML = `<span class="n">A</span><p>${txt}</p><span class="cite caps">${esc(c.cite)}${h.also ? ` · and ${h.also} more` : ''}${what ? ' · ' + what : ''}</span>`;
+    d.title = h.cites.map(x => x.cite).join('\n');
+    d.addEventListener('mousedown', e => { e.preventDefault(); r.focus = 'agreed'; r.acur = i; acceptAgreed(); });
+    box.appendChild(d);
+  });
+  return box;
+}
+// Nine cells, all at the strength dial. Double-click: the local model's three across the top. C: Claude's six
+// beneath. C again: nine fresh from Claude, and every C after that. Keys 1–9 pick.
+function renderGrid(r){
+  const box = document.createElement('div');
+  const g = document.createElement('div'); g.className = 'grid' + (r.start == null ? ' whole' : '');
+  const localName = S.status && S.status.local ? String(S.status.local.model || 'local').split(':')[0] : 'local';
+  for (let c = 0; c < 9; c++){
+    const sl = r.slots.find(x => x.cell === c); const i = sl ? r.slots.indexOf(sl) : -1;
+    const waiting = (r.round < 2 && c < 3) ? r.wait.local : (r.wait.cloud && r.round > 0);
+    if (!sl && !waiting && (c >= 3 || r.round >= 2)) continue;   // leave unasked rows out, not as blank space
+    const d = document.createElement('div');
+    d.className = 'cell' + (sl ? '' : ' empty') + (i >= 0 && i === r.cur && r.focus !== 'agreed' ? ' cur' : '');
+    const flags = sl && sl.flags && sl.flags.length ? `<span class="flag">▲ ${esc(sl.flags.join(' · '))}</span>` : '';
+    const src = sl && sl.tier === 'local' ? `<span class="src">${esc(localName)}</span>` : '';
+    d.innerHTML = `<span class="n">${c + 1}</span><p>${sl ? markChanges(r.source, sl.text) + src : (waiting ? '…' : '—')}${flags}</p>`;
+    if (sl) d.addEventListener('mousedown', e => { e.preventDefault(); r.cur = i; acceptRail(); });
+    g.appendChild(d);
+  }
+  box.appendChild(g);
+  const more = document.createElement('div'); more.className = 'more caps';
+  more.textContent = r.wait.cloud && r.round > 0 ? 'Claude is writing…'
+    : r.round === 0 ? (r.parts.claude.length && !r.wait.cloud ? 'C · six from Claude, ready' : 'C · six more from Claude') : 'C · nine fresh from Claude';
+  box.appendChild(more);
+  return box;
+}
+function markChanges(src, out){
+  // word-level diff: words in the proposal absent from the source are brass
+  const a = src.toLowerCase().match(/[\w']+/g) || []; const set = new Set(a);
+  return esc(out).split(/(\s+)/).map(w => { const k = w.toLowerCase().replace(/[^\w']/g, ''); return (k && !set.has(k)) ? `<span class="chg">${w}</span>` : w; }).join('');
+}
+function readout(){
+  const n = S.doc.sentences.length, a = S.doc.sentences.filter(s => s.state==='agreed').length, o = S.doc.sentences.filter(s => s.state==='open').length;
+  const b = S.doc.sentences.reduce((k, s) => k + bracketsIn(s.text || '').length, 0);
+  $('#readout').textContent = (n && a === n) ? `All ${n} agreed · nothing is agreed until everything is agreed` : `${a} of ${n} agreed${o ? ` · ${o} open` : ''}${b ? ` · ${b} in brackets` : ''} · ${now()}`;
+  $('#progress').style.width = n ? `${100 * a / n}%` : '0';
+}
+setInterval(() => S.live && readout(), 30000);
+let hintT;
+function hint(t, transient){
+  clearTimeout(hintT); $('#hint').textContent = t; $('#hint').classList.toggle('flash', !!transient);
+  if (transient) hintT = setTimeout(() => { $('#hint').classList.remove('flash'); $('#hint').textContent = S.mode === 'rest' ? KEYS_REST : $('#hint').textContent; }, 6000);
+}
+
+/* ---------------- focus & editing ---------------- */
+function pEl(id){ return document.querySelector(`p.sent[data-id="${id}"]`); }
+function setFocusRow(id){ S.focusId = id; document.querySelectorAll('.row').forEach(x => x.classList.toggle('focus', x.dataset.id === id)); }
+function focusSentence(id, where){
+  setFocusRow(id); const p = pEl(id); if (!p) return; p.focus({ preventScroll: true });
+  if (where){ const r = document.createRange(); r.selectNodeContents(p); r.collapse(where === 'start'); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  centre(id);
+}
+// keep the sentence being worked on at the reading height of the screen; with proposals open, lift it near the top
+// so the grid underneath fits on screen
+function centre(id){
+  const row = document.querySelector(`.row[data-id="${id}"]`); if (!row) return;
+  const open = S.rail && S.rail.id === id;
+  const sc = $('#scroll'); S.scrollTo = Math.max(0, row.offsetTop - sc.clientHeight * (open ? 0.17 : 0.38));
+  sc.scrollTo({ top: S.scrollTo, behavior: 'smooth' });
+}
+function caretOffset(p){ const sel = getSelection(); if (!sel.rangeCount) return 0; const r = sel.getRangeAt(0).cloneRange(); r.selectNodeContents(p); r.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset); return r.toString().length; }
+function setCaret(p, off){ const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let n, acc = 0; while ((n = walker.nextNode())){ if (acc + n.length >= off){ const r = document.createRange(); r.setStart(n, off - acc); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); return; } acc += n.length; } }
+function selOffsets(p){ const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return null; const rg = sel.getRangeAt(0); if (!p.contains(rg.startContainer) || !p.contains(rg.endContainer)) return null; const pre = rg.cloneRange(); pre.selectNodeContents(p); pre.setEnd(rg.startContainer, rg.startOffset); const start = pre.toString().length; return { start, end: start + rg.toString().length }; }
+
+let editT;
+$('#scroll').addEventListener('scrollend', () => { if (S.scrollTo != null && Math.abs($('#scroll').scrollTop - S.scrollTo) <= 2) S.scrollTo = null; });
+$('#scroll').addEventListener('wheel', () => { S.scrollTo = null; }, { passive: true });   // the facilitator scrolling by hand wins
+document.addEventListener('focusin', e => { const p = e.target.closest && e.target.closest('p.sent'); if (p && S.focusId !== p.dataset.id){ setFocusRow(p.dataset.id); centre(p.dataset.id); } });
+document.addEventListener('input', e => {
+  const p = e.target.closest && e.target.closest('p.sent'); if (!p) return;
+  const s = sentence(p.dataset.id); if (!s) return;
+  s.text = p.innerText.replace(/\n+$/,''); snapshot();
+  clearTimeout(editT); editT = setTimeout(() => resegment(p.dataset.id), 700);
+});
+async function resegment(id){
+  const p = pEl(id); const s = sentence(id); if (!p || !s) return;
+  const text = p.innerText.replace(/\n+$/,'');
+  if (!/[.!?]\s+\S/.test(text)) return; // no boundary typed
+  const off = caretOffset(p);
+  const r = await api('/api/segment', { text, sentences: [{ id: s.id, text: s.history.length ? s.history[s.history.length-1].text : s.text, state: s.state, version: s.version }] });
+  if (r.sentences.length <= 1) return;
+  pushUndo();
+  const i = idx(id);
+  // the original sentence keeps its id; its shortened text goes into its history, or focusout would later see the
+  // history disagree with the screen and "restore" the pre-split text as a new edit
+  const made = r.sentences.map(ns => ns.id === s.id ? { ...s, text: ns.text, version: ns.version, state: ns.state, history: [...s.history, { version: ns.version, text: ns.text, at: now(), via: 'split' }] } : { ...ns, kind: s.kind === 'h' ? 'p' : (s.kind || 'p'), label: null, brk: false, history: [{ version: 1, text: ns.text, at: now(), via: 'split' }], dissents: [] });
+  S.doc.sentences.splice(i, 1, ...made);
+  log('split', { into: made.length }, id);
+  render(); snapshot();
+  // place caret: find which new sentence holds the old offset
+  let acc = 0; for (const ns of made){ if (off <= acc + ns.text.length + 1){ focusSentence(ns.id); setCaret(pEl(ns.id), Math.max(0, off - acc)); break; } acc += ns.text.length + 1; }
+}
+document.addEventListener('focusout', e => {
+  if (rendering) return;
+  const p = e.target.closest && e.target.closest('p.sent'); if (!p) return;
+  const s = sentence(p.dataset.id); if (!s) return;
+  const text = p.innerText.replace(/\n+$/,'');
+  const last = s.history.length ? s.history[s.history.length-1].text : '';
+  if (text !== last){ s.text = last; commitText(s.id, text, 'typed'); refreshRow(s.id); }
+});
+
+/* ---------------- hover (⌥ held) ---------------- */
+let altDown = false, hoverT;
+document.addEventListener('mousemove', e => {
+  if (!S.live || !altDown || (S.mode !== 'rest' && S.mode !== 'hover')) return; // ⌥ is also how a Mac types an em dash
+  clearTimeout(hoverT); hoverT = setTimeout(() => hoverAt(e.clientX, e.clientY), 120);
+});
+function wordAt(x, y){
+  const p = document.elementFromPoint(x, y)?.closest?.('p.sent'); if (!p) return null;
+  let node, off;
+  if (document.caretPositionFromPoint){ const c = document.caretPositionFromPoint(x, y); if (!c) return null; node = c.offsetNode; off = c.offset; }
+  else if (document.caretRangeFromPoint){ const c = document.caretRangeFromPoint(x, y); if (!c) return null; node = c.startContainer; off = c.startOffset; }
+  if (!node || node.nodeType !== 3) return null;
+  const pre = document.createRange(); pre.selectNodeContents(p); pre.setEnd(node, off); const at = pre.toString().length;
+  const text = p.innerText; let s = at, e = at;
+  while (s > 0 && /[\w']/.test(text[s-1])) s--; while (e < text.length && /[\w']/.test(text[e])) e++;
+  if (e <= s) return null;
+  return { id: p.dataset.id, start: s, end: e, text };
+}
+async function hoverAt(x, y){
+  const w = wordAt(x, y);
+  if (!w){ if (S.hover){ S.hover = null; S.mode = 'rest'; render(); } return; }
+  if (S.hover && S.hover.id === w.id && S.hover.start === w.start) return;
+  const s = sentence(w.id); if (!s) return;
+  const key = `syn|${s.text}|${w.start}|${w.end}`; let res = S.cache.get(key);
+  if (!res){ res = await api('/api/synonyms', { sentence: s.text, start: w.start, end: w.end }); S.cache.set(key, res); }
+  if (!altDown) return;
+  S.hover = { id: w.id, start: w.start, end: w.end, opts: res.synonyms, pick: -1, ms: res.ms }; S.mode = 'hover';
+  render(); hint('← → choose · ↵ swap · esc');
+}
+function applyHover(){
+  const h = S.hover; if (!h || h.pick < 0) return;
+  const s = sentence(h.id); const chosen = h.opts[h.pick];
+  const text = s.text.slice(0, h.start) + chosen + s.text.slice(h.end);
+  log('swap.lexical', { from: s.text.slice(h.start, h.end), to: chosen, shown: h.opts }, s.id);
+  commitText(s.id, text, 'lexical: ' + chosen);
+  closeAll(); render(); focusSentence(s.id); setCaret(pEl(s.id), h.start + chosen.length);
+}
+
+/* ---------------- rail (span or whole sentence) ---------------- */
+document.addEventListener('mouseup', () => setTimeout(maybeOpenRail, 10));
+document.addEventListener('keyup', e => { if (e.shiftKey || e.key === 'Shift') setTimeout(maybeOpenRail, 10); });
+function maybeOpenRail(){
+  if (!S.live || S.mode !== 'rest' && S.mode !== 'hover') return;
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return;
+  const p = sel.anchorNode.parentElement?.closest?.('p.sent'); if (!p) return;
+  const s = sentence(p.dataset.id); if (!s) return;
+  const o = selOffsets(p); if (!o || o.end - o.start < 2) return;
+  // trim to word boundaries
+  let { start, end } = o; const t = s.text; while (start < end && /\s/.test(t[start])) start++; while (end > start && /\s/.test(t[end-1])) end--;
+  if (end - start < 2) return;
+  const b = bracketsIn(t).find(b => start < b.end && end > b.start);
+  if (b){ openBracket(s.id, b); return; }
+  openRail(s.id, start, end);
+}
+async function openRail(id, start, end){
+  const s = sentence(id); closeAll(false);
+  S.hover = null; S.mode = start == null ? 'sentence' : 'rail';
+  const source = start == null ? s.text : s.text.slice(start, end);
+  S.rail = { id, start, end, source, slots: [], parts: { local: [], claude: [] }, round: 0, wait: { local: true, cloud: false }, err: { local: null, cloud: null }, sse: { local: null, cloud: null }, cur: 0, dials: { strength: 0, register: 'institutional', length: 'same' }, ladder: null, pending: true, req: 0, focus: 'grid', acur: 0, agreed: null };
+  render(); centre(id); hint(start == null ? KEYS_SENT : KEYS_SPAN);
+  log(start == null ? 'rail.open.sentence' : 'rail.open.span', { source }, id);
+  doQueryRail();   // at once: the debounce is for dial presses, not for opening
+  loadAgreed(S.rail);
+  // the verb ladder is only needed once the strength dial moves, so it arrives alongside the proposals, not before them
+  if (start != null){
+    const key = `syn|${s.text}|${start}|${end}`; let res = S.cache.get(key);
+    if (!res){ res = await api('/api/synonyms', { sentence: s.text, start, end }).catch(() => null); if (res) S.cache.set(key, res); }
+    if (res && S.rail && S.rail.id === id && S.rail.start === start){ S.rail.ladder = res.ladder; render(); }
+  }
+}
+// precedents do not depend on the dials: fetched once per opening, in milliseconds
+async function loadAgreed(r){
+  if (!(S.status && S.status.library && S.status.library.ok)) return;
+  const s = sentence(r.id); r.agreed = { wait: true, hits: [] };
+  const q = new URLSearchParams({ sentence: s.text, sentence_id: s.id }); if (r.start != null){ q.set('start', r.start); q.set('end', r.end); }
+  const res = await fetch('/api/precedents?' + q).then(x => x.json()).catch(() => ({ hits: [] }));
+  if (S.rail !== r) return;
+  r.agreed = { wait: false, hits: res.hits || [], ms: res.ms }; render();
+}
+function acceptAgreed(){
+  const r = S.rail; const h = r && r.agreed && r.agreed.hits[r.acur]; if (!h) return;
+  const s = sentence(r.id); const cite = h.cites[0].cite;
+  if (h.same){ log('agreed.confirm', { source: r.source, text: h.text, cite: h.cites[0] }, s.id); closeAll(false); render(); focusSentence(s.id); hint(`Already agreed language · ${cite}`, true); return; }
+  if (r.start != null && h.phrase == null){ hint(kb('Reference only: it does not line up with the selection · ⌘↵ on the sentence offers precedents whole'), true); return; }
+  const [a, b, to] = r.start == null ? [0, s.text.length, h.text] : [h.rstart, h.rend, h.phrase];
+  if (r.start != null && /[\[\]]/.test(s.text.slice(a, b))){ hint(kb('That stretch holds brackets · settle them first, or ⇧↵ to keep the precedent beside it'), true); return; }
+  const text = s.text.slice(0, a) + to + s.text.slice(b);
+  log('accept', { tier: 'agreed', from: s.text.slice(a, b), to, cite: h.cites[0], also: h.also, shown: r.agreed.hits.map(x => ({ text: x.text, phrase: x.phrase, cite: x.cites[0].cite })) }, s.id);
+  commitText(s.id, text, `agreed: ${cite}`);
+  closeAll(false); render(); focusSentence(s.id); setCaret(pEl(s.id), a + to.length);
+}
+// ⇧↵ on a precedent: kept beside the drafted wording, in brackets, rather than replacing it
+function keepAgreedAsAlternative(){
+  const r = S.rail; const h = r.agreed.hits[r.acur]; const s = sentence(r.id);
+  if (r.start != null && h.phrase == null || h.same){ acceptAgreed(); return; }
+  const [a, b, to] = r.start == null ? [0, s.text.length, h.text] : [h.rstart, h.rend, h.phrase];
+  log('accept.alternative', { tier: 'agreed', from: s.text.slice(a, b), to, cite: h.cites[0] }, s.id);
+  bracketize(r.id, a, b, to);
+}
+let railT;
+function queryRail(){ clearTimeout(railT); railT = setTimeout(doQueryRail, 250); }
+// cells 1–3: the local model's three until C is pressed twice; cells 4–9 (or all nine): Claude's, once C is pressed
+function compose(r){
+  const local = r.round >= 2 ? [] : r.parts.local.slice(0, 3).map((x, j) => ({ ...x, cell: j }));
+  // a wording the local model already offered is not shown twice; Claude's prefetched six stay hidden until C
+  const shown = new Set(local.map(x => x.text.toLowerCase()));
+  const claude = r.round === 0 ? [] : r.parts.claude.filter(x => !shown.has(x.text.toLowerCase())).slice(0, r.round >= 2 ? 9 : 6).map((x, j) => ({ ...x, cell: (r.round >= 2 ? 0 : 3) + j }));
+  r.slots = [...local, ...claude];
+  r.pending = r.wait.local || (r.wait.cloud && r.round > 0); if (r.cur >= r.slots.length) r.cur = 0;
+}
+function closeStreams(r){ Object.values(r.sse || {}).forEach(es => es && es.close()); r.sse = { local: null, cloud: null }; }
+// (re)ask every tier showing, at the current dials: the local model unless Claude has taken all nine; Claude once C
+// was pressed, or in the background beforehand when prefetch is on
+function doQueryRail(){
+  const r = S.rail; if (!r || r.kind === 'bracket') return; r.req++;
+  closeStreams(r);
+  r.parts = { local: [], claude: [] }; r.wait = { local: false, cloud: false }; r.err = { local: null, cloud: null }; r.cur = 0;
+  if (r.round < 2) streamTier(r, 'local', 3);
+  if (r.round > 0) streamTier(r, 'cloud', r.round >= 2 ? 9 : 6);
+  else if (S.status && S.status.prefetch && S.status.cloud.ok) streamTier(r, 'cloud', 6, true);
+  compose(r); render();
+}
+// the rung the strength dial points at, so the models aim at a named force rather than "much stronger"
+function railTarget(r){ return r.ladder && r.dials.strength ? (r.ladder.rungs[r.ladder.current + r.dials.strength] || null) : null; }
+// C: six from Claude under the local three (at once, if prefetched); C again (and after): nine fresh from Claude
+function moreFromClaude(){
+  const r = S.rail; r.round += 1;
+  log('rail.claude', { source: r.source, round: r.round, prefetched: r.round === 1 && (r.parts.claude.length > 0 || r.wait.cloud) }, r.id);
+  if (r.round === 1 && (r.parts.claude.length || r.wait.cloud)){ compose(r); render(); return; }
+  if (r.round >= 2 && r.sse.local){ r.sse.local.close(); r.wait.local = false; }
+  streamTier(r, 'cloud', r.round >= 2 ? 9 : 6);
+  compose(r); render();
+}
+// one tier's proposals, streamed into its cells as the model writes them
+function streamTier(r, tier, n, prefetch = false){
+  const s = sentence(r.id); const part = tier === 'local' ? 'local' : 'claude', w = tier;
+  if (tier === 'cloud' && !(S.status && S.status.cloud.ok)){ r.err.cloud = 'not available this session (see the setup screen)'; return; }
+  if (r.sse[w]) r.sse[w].close();
+  const ctx = S.doc.sentences.filter(x => x.id !== s.id && Math.abs(idx(x.id) - idx(s.id)) <= 1).map(x => x.text).join('\n');
+  const q = new URLSearchParams({ tier, sentence: s.text, strength: r.dials.strength, register: r.dials.register, length: r.dials.length, context: ctx, sentence_id: s.id, n });
+  if (r.start != null){ q.set('start', r.start); q.set('end', r.end); }
+  const target = railTarget(r); if (target) q.set('target', target);
+  if (prefetch) q.set('prefetch', 1);
+  const req = r.req; const t0 = performance.now();
+  r.parts[part] = []; r.wait[w] = true; r.err[w] = null;
+  const es = new EventSource('/api/propose/stream?' + q.toString()); r.sse[w] = es;
+  const stale = () => !S.rail || S.rail !== r || r.req !== req;
+  const show = () => { compose(r); if (part === 'local' || r.round > 0) render(); };
+  es.addEventListener('delta', e => {
+    if (stale()){ es.close(); return; }
+    r.parts[part] = parseLines(JSON.parse(e.data).text, n).map(t => ({ text: t, flags: [], tier: part, ms: null }));
+    show();
+  });
+  es.addEventListener('final', e => {
+    es.close(); if (stale()) return;
+    const d = JSON.parse(e.data); r.parts[part] = d.options.map(o => ({ ...o, tier: part, ms: d.ms })); r.wait[w] = false;
+    if (!r.parts[part].length) r.err[w] = 'no usable proposal (all dropped by validation)';
+    compose(r); render();
+  });
+  // EventSource retries a broken stream by itself; close it so a failing call is reported once, not repeated
+  es.addEventListener('error', e => {
+    es.close(); if (stale()) return; r.wait[w] = false;
+    let msg = null; try { msg = JSON.parse(e.data).error; } catch(_){}
+    r.err[w] = msg || `connection lost after ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    compose(r); render();
+  });
+}
+function acceptRail(){
+  const r = S.rail; if (!r || !r.slots.length) return; const sl = r.slots[r.cur]; if (!sl || sl.streaming) return;
+  const s = sentence(r.id);
+  const text = r.start == null ? sl.text : s.text.slice(0, r.start) + sl.text + s.text.slice(r.end);
+  log('accept', { tier: sl.tier, from: r.source, to: sl.text, dials: r.dials, shown: r.slots.map(x => ({ tier: x.tier, text: x.text })), flags: sl.flags }, s.id);
+  commitText(s.id, text, `${sl.tier}: ${sl.text.slice(0, 40)}`);
+  const pos = r.start == null ? text.length : r.start + sl.text.length;
+  closeAll(); render(); focusSentence(s.id); setCaret(pEl(s.id), pos);
+}
+/* ---------------- brackets ---------------- */
+// wrap a span in brackets, with an alternative if one is given; without one, open the bracket to type it
+function bracketize(id, start, end, alternative){
+  const s = sentence(id); if (!s) return;
+  const span = s.text.slice(start, end);
+  if (/[\[\]]/.test(span)){ hint('That span already holds brackets · double-click a bracket to open it', true); return; }
+  const inner = alternative ? span + SEP + alternative : span;
+  const text = s.text.slice(0, start) + '[' + inner + ']' + s.text.slice(end);
+  if (S.rail && S.rail.sse) closeStreams(S.rail);
+  log('bracket.open', { span, alternative: alternative || null }, id);
+  commitText(id, text, 'bracket: ' + span.slice(0, 40));
+  S.rail = null; S.mode = 'rest';
+  openBracket(id, bracketsIn(text).find(b => b.start === start), !alternative);
+}
+function openBracket(id, b, adding){
+  if (!b) return;
+  S.hover = null; S.mode = 'bracket'; getSelection().removeAllRanges();
+  S.rail = { kind: 'bracket', id, start: b.start, end: b.end, alts: b.alts.map(a => a.text), cur: 0, adding: !!adding };
+  setFocusRow(id); render(); centre(id); hint(KEYS_BRACKET);
+}
+function rewriteBracket(r, alts, via){
+  const s = sentence(r.id); const inner = alts.join(SEP);
+  commitText(r.id, s.text.slice(0, r.start) + '[' + inner + ']' + s.text.slice(r.end), via);
+  r.alts = alts; r.end = r.start + inner.length + 2;
+}
+function addAlternative(value){
+  const r = S.rail; const v = (value || '').trim().replace(/[\[\]]/g, '');
+  if (v && !r.alts.includes(v)){ rewriteBracket(r, [...r.alts, v], 'alternative: ' + v.slice(0, 40)); log('bracket.add', { alternative: v, alternatives: r.alts }, r.id); r.cur = r.alts.length - 1; }
+  r.adding = false; render();
+}
+function dropAlternative(){
+  const r = S.rail; const gone = r.alts[r.cur];
+  if (r.alts.length === 1){ settleBracket('bracket.remove'); return; }  // the last wording: the brackets come off
+  rewriteBracket(r, r.alts.filter((_, i) => i !== r.cur), 'dropped: ' + gone.slice(0, 40));
+  log('bracket.drop', { dropped: gone, alternatives: r.alts }, r.id); r.cur = Math.min(r.cur, r.alts.length - 1); render();
+}
+function settleBracket(kind = 'bracket.settle'){
+  const r = S.rail; const s = sentence(r.id); const chosen = r.alts[r.cur];
+  log(kind, { chosen, alternatives: r.alts }, r.id);
+  commitText(r.id, s.text.slice(0, r.start) + chosen + s.text.slice(r.end), 'settled: ' + chosen.slice(0, 40));
+  const id = r.id, pos = r.start + chosen.length;
+  closeAll(false); render(); focusSentence(id); setCaret(pEl(id), pos);
+}
+// a machine proposal kept alongside the current wording instead of replacing it
+function keepAsAlternative(){
+  const r = S.rail; if (!r || !r.slots.length) return; const sl = r.slots[r.cur]; if (!sl || sl.streaming) return;
+  const s = sentence(r.id); const start = r.start == null ? 0 : r.start, end = r.start == null ? s.text.length : r.end;
+  log('accept.alternative', { tier: sl.tier, from: r.source, to: sl.text, shown: r.slots.map(x => ({ tier: x.tier, text: x.text })) }, s.id);
+  bracketize(r.id, start, end, sl.text);
+}
+document.addEventListener('dblclick', e => {
+  const p = e.target.closest && e.target.closest('p.sent'); if (!p || !S.live) return;
+  const s = sentence(p.dataset.id); const sel = getSelection(); if (!s || !sel.rangeCount) return;
+  const pre = sel.getRangeAt(0).cloneRange(); pre.selectNodeContents(p); pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+  const b = bracketAt(s.text, pre.toString().length);
+  if (b){ if (S.rail && S.rail.sse) closeStreams(S.rail); S.rail = null; openBracket(s.id, b); }
+});
+
+function closeAll(logIt = true){
+  if (S.rail){ if (S.rail.sse) closeStreams(S.rail); if (logIt && S.rail.slots.length) log('reject', { shown: S.rail.slots.map(x => ({ tier: x.tier, text: x.text })) }, S.rail.id); }
+  S.rail = null; S.hover = null; if (S.mode !== 'confirm') S.mode = 'rest';
+  hint(KEYS_REST);
+}
+
+/* ---------------- states, dissent, history ---------------- */
+function setState(id, state){
+  const s = sentence(id); if (!s || s.state === state) return;
+  if (state === 'agreed' && bracketsIn(s.text).length){ hint('Settle the brackets in this sentence before agreeing it', true); return; }
+  pushUndo(); s.state = state;
+  log('state', { state, version: s.version }, id); render(); snapshot();
+}
+function addDissent(id, line){
+  const s = sentence(id); const m = line.match(/^([^—:–-]{1,40})[—:–-]\s*(.+)$/); const who = m ? m[1].trim() : 'unattributed'; const note = m ? m[2].trim() : line.trim();
+  if (!note) return; pushUndo(); s.dissents.push({ who, note, version: s.version, at: now() });
+  log('dissent', { who, note, version: s.version }, id); snapshot();
+}
+
+/* ---------------- keys ---------------- */
+document.addEventListener('keydown', e => {
+  if (!S.live){ // setup screen
+    const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
+    if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing){ fullscreen(); }
+    return;
+  }
+  const meta = e.metaKey || e.ctrlKey; const k = e.key;
+  if (S.mode === 'confirm'){
+    e.preventDefault();
+    if (k === 'Enter') endSession();
+    if (k === 'Escape'){ $('#confirm').classList.remove('on'); S.mode = 'rest'; if (S.focusId) focusSentence(S.focusId); }
+    return;
+  }
+  if (k === 'Alt'){ altDown = true; return; }
+  if (meta && k.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (k.toLowerCase() === 'f' && meta && e.shiftKey){ e.preventDefault(); fullscreen(); return; }
+  // Mac: Option+letter composes a character (œ ø ∂ ˙ ´), so match the physical key
+  if (!meta && e.altKey && e.code === 'KeyQ'){ e.preventDefault(); flushTyping(); closeAll(false); render(); S.mode = 'confirm'; $('#confirm').classList.add('on'); return; }
+  if (!meta && e.altKey && e.code === 'KeyE'){ e.preventDefault(); exportRecord(); return; }
+  const p = document.activeElement?.closest?.('p.sent'); const fid = p ? p.dataset.id : S.focusId; const s = fid ? sentence(fid) : null;
+
+  if (S.mode === 'dissent'){
+    if (k === 'Escape'){ e.preventDefault(); S.mode = 'rest'; render(); focusSentence(fid); }
+    if (k === 'Enter'){ e.preventDefault(); addDissent(fid, $('#dissentIn').value); S.mode = 'rest'; render(); focusSentence(fid); }
+    return;
+  }
+  if (S.mode === 'bracket' && S.rail){
+    const r = S.rail;
+    if (r.adding){
+      if (k === 'Enter'){ e.preventDefault(); addAlternative($('#altIn') ? $('#altIn').value : ''); }
+      if (k === 'Escape'){ e.preventDefault(); r.adding = false; render(); }
+      return; // typing goes to the input
+    }
+    if (k === 'Tab' || k === 'ArrowDown' || k === 'ArrowUp'){ e.preventDefault(); r.cur = (r.cur + ((k === 'ArrowUp' || e.shiftKey) ? -1 : 1) + r.alts.length) % r.alts.length; render(); return; }
+    if (k === 'Enter'){ e.preventDefault(); settleBracket(); return; }
+    if (e.code === 'KeyB'){ e.preventDefault(); r.adding = true; render(); return; }
+    if (e.code === 'KeyX' || k === 'Backspace' || k === 'Delete'){ e.preventDefault(); dropAlternative(); return; }
+    if (k === 'Escape'){ e.preventDefault(); const id = r.id; closeAll(false); render(); focusSentence(id); return; }
+    e.preventDefault(); return;
+  }
+  if (S.mode === 'hover' && S.hover){
+    const h = S.hover;
+    if (k === 'ArrowRight' || k === 'ArrowLeft'){ e.preventDefault(); if (h.opts.length){ h.pick = (h.pick + (k === 'ArrowRight' ? 1 : -1) + h.opts.length) % h.opts.length; render(); } return; }
+    if (k === 'Enter'){ e.preventDefault(); applyHover(); return; }
+    if (k === 'Escape'){ e.preventDefault(); closeAll(false); render(); return; }
+  }
+  if ((S.mode === 'rail' || S.mode === 'sentence') && S.rail){
+    const r = S.rail;
+    const onAgreed = r.focus === 'agreed' && r.agreed && r.agreed.hits.length;
+    if (e.code === 'KeyA' && !meta){ e.preventDefault(); const n = r.agreed ? r.agreed.hits.length : 0; if (n){ r.acur = r.focus === 'agreed' ? (r.acur + 1) % n : 0; r.focus = 'agreed'; render(); } return; }
+    if (k === 'Enter' && !meta && onAgreed){ e.preventDefault(); e.shiftKey ? keepAgreedAsAlternative() : acceptAgreed(); return; }
+    if (k === 'Tab' || /^Digit[1-9]$/.test(e.code)) r.focus = 'grid';
+    if (k === 'Tab'){ e.preventDefault(); if (r.slots.length){ r.cur = (r.cur + (e.shiftKey ? -1 : 1) + r.slots.length) % r.slots.length; render(); } return; }
+    if (k === 'Enter' && e.shiftKey && !meta){ e.preventDefault(); keepAsAlternative(); return; }
+    if (k === 'Enter' && !meta){ e.preventDefault(); acceptRail(); return; }
+    if (e.code === 'KeyB' && !meta && r.start != null){ e.preventDefault(); bracketize(r.id, r.start, r.end); return; }
+    if (k === 'Escape'){ e.preventDefault(); const id = r.id; closeAll(); render(); getSelection().removeAllRanges(); centre(id); return; }
+    if (k === 'ArrowLeft' || k === 'ArrowRight'){ e.preventDefault(); const max = r.ladder ? r.ladder.rungs.length - 1 - r.ladder.current : 2; const min = r.ladder ? -r.ladder.current : -1; r.dials.strength = Math.max(min, Math.min(max, r.dials.strength + (k === 'ArrowRight' ? 1 : -1))); render(); queryRail(); return; }
+    if (k === 'ArrowUp' || k === 'ArrowDown'){ e.preventDefault(); const i = LENGTHS.indexOf(r.dials.length); r.dials.length = LENGTHS[Math.max(0, Math.min(2, i + (k === 'ArrowUp' ? 1 : -1)))]; render(); queryRail(); return; }
+    if (k.toLowerCase() === 'r' && !meta){ e.preventDefault(); r.dials.register = REGISTERS[(REGISTERS.indexOf(r.dials.register) + 1) % 3]; render(); queryRail(); return; }
+    if (e.code === 'KeyC' && !meta){ e.preventDefault(); moreFromClaude(); return; }
+    if (/^Digit[1-9]$/.test(e.code) && !meta){ e.preventDefault(); const i = r.slots.findIndex(x => x.cell === +e.code.slice(5) - 1); if (i >= 0){ r.cur = i; render(); } return; }
+    return; // swallow typing while rail is open
+  }
+  // rest mode
+  if (!s) return;
+  if (k === 'Enter' && meta){ e.preventDefault(); openRail(s.id, null, null); return; }
+  if (k === 'Enter' && e.shiftKey){ e.preventDefault(); setState(s.id, s.state === 'agreed' ? 'draft' : 'agreed'); return; }
+  if (k === 'Enter' && p){ // new sentence after, in the same block
+    e.preventDefault(); flushTyping();
+    const at = caretOffset(p); const tail = s.text.slice(at).trim(); const head = s.text.slice(0, at).trimEnd();
+    if (tail) commitText(s.id, head, 'typed'); else pushUndo();
+    const ns = { id: sid(), text: tail, state: 'draft', version: 1, kind: s.kind === 'h' ? 'p' : (s.kind || 'p'), label: null, brk: s.kind === 'h', history: [{ version: 1, text: tail, at: now(), via: tail ? 'split' : 'new' }], dissents: [] };
+    S.doc.sentences.splice(idx(s.id) + 1, 0, ns); log('new', {}, ns.id); render(); snapshot(); focusSentence(ns.id, 'start'); return;
+  }
+  if (k === 'Backspace' && p && caretOffset(p) === 0 && !getSelection().toString()){ // join with previous
+    const i = idx(s.id); if (i === 0) return; const prev = S.doc.sentences[i-1];
+    e.preventDefault(); flushTyping(); pushUndo(); const at = prev.text.length; const joined = (prev.text + ' ' + s.text).trim();
+    S.doc.sentences.splice(i, 1); prev.text = joined; prev.version += 1; prev.history.push({ version: prev.version, text: joined, at: now(), via: 'join' });
+    // the joined sentence's dissents stay on the record; agreement on either half no longer holds
+    prev.dissents.push(...s.dissents.map(d => ({ ...d, joined_from: s.id })));
+    prev.state = (prev.state === 'open' || s.state === 'open') ? 'open' : 'draft';
+    log('join', { removed: s.id, removed_text: s.text, removed_state: s.state, dissents_moved: s.dissents.length }, prev.id); render(); snapshot(); focusSentence(prev.id); setCaret(pEl(prev.id), at + 1); return;
+  }
+  if (!meta && e.altKey && e.code === 'KeyB' && p){ // bracket the word at the caret, or open the bracket it sits in
+    e.preventDefault(); flushTyping(); const off = caretOffset(p); const b = bracketAt(s.text, off);
+    if (b){ openBracket(s.id, b); return; }
+    let a = off, z = off; while (a > 0 && /[\w'’-]/.test(s.text[a-1])) a--; while (z < s.text.length && /[\w'’-]/.test(s.text[z])) z++;
+    if (z > a) bracketize(s.id, a, z); return;
+  }
+  if (!meta && e.altKey && e.code === 'KeyO'){ e.preventDefault(); setState(s.id, s.state === 'open' ? 'draft' : 'open'); return; }
+  if (!meta && e.altKey && e.code === 'KeyD'){ e.preventDefault(); S.mode = 'dissent'; render(); return; }
+  if (!meta && e.altKey && e.code === 'KeyH'){ e.preventDefault(); S.showHist = S.showHist === s.id ? null : s.id; render(); return; }
+  if (k === 'ArrowDown' && p && e.altKey){ e.preventDefault(); const n = S.doc.sentences[idx(s.id)+1]; if (n) focusSentence(n.id, 'start'); return; }
+  if (k === 'ArrowUp' && p && e.altKey){ e.preventDefault(); const n = S.doc.sentences[idx(s.id)-1]; if (n) focusSentence(n.id, 'end'); return; }
+});
+document.addEventListener('keyup', e => { if (e.key === 'Alt'){ altDown = false; if (S.mode === 'hover'){ closeAll(false); render(); } } });
+window.addEventListener('blur', () => { altDown = false; });
+// clicking a row focuses it
+document.addEventListener('mousedown', e => { const row = e.target.closest && e.target.closest('.row'); if (row && S.mode !== 'rail' && S.mode !== 'sentence') setFocusRow(row.dataset.id); });
+</script>
+</body>
+</html>

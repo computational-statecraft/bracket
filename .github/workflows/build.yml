@@ -1,0 +1,129 @@
+# Tests, builds the desktop app for macOS, Windows and Linux, and checks each build the way a new user would meet it:
+# an empty data folder, a model downloaded through the app, real proposals from the built-in engine.
+# Pushing a tag v* publishes the builds as a GitHub Release.
+name: build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LLAMA_CPP_TAG: b12137          # the llama.cpp release bundled with the app (github.com/ggml-org/llama.cpp/releases)
+  PYTHON_VERSION: "3.12"
+  UV_PYTHON_PREFERENCE: only-system
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - run: uv run pytest -q
+
+  library:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - name: Fetch the precedent library
+        run: |
+          uv run python -m backend.library_cli fetch --out library/texts 2>&1 | tee fetch.log
+          n=$(ls library/texts/*.json | wc -l)
+          total=$(python -c "import json;print(len(json.load(open('library/sources.json'))['sources']))")
+          echo "### Precedent library: $n of $total documents" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "FAILED|EMPTY" fetch.log | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          test "$n" -ge 20   # a build with a thin library is a broken build
+      - uses: actions/upload-artifact@v4
+        with: { name: library-texts, path: library/texts/*.json }
+
+  build:
+    needs: [test, library]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, name: macOS-arm64, llama: macos-arm64.tar.gz }
+          - { os: windows-latest, name: Windows-x64, llama: win-cpu-x64.zip }
+          - { os: ubuntu-22.04, name: Linux-x64, llama: ubuntu-x64.tar.gz }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run: { shell: bash }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: library-texts, path: library/texts }
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked --group build
+      - name: Bundle WordNet
+        run: uv run python -c "import nltk; nltk.download('wordnet', download_dir='build/nltk_data', raise_on_error=True)"
+      - name: Bundle llama.cpp ${{ env.LLAMA_CPP_TAG }}
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          mkdir -p build/llama-src build/llama
+          asset="llama-$LLAMA_CPP_TAG-bin-${{ matrix.llama }}"
+          gh release download "$LLAMA_CPP_TAG" -R ggml-org/llama.cpp -p "$asset" -D build
+          case "$asset" in *.zip) unzip -q "build/$asset" -d build/llama-src ;; *) tar -xzf "build/$asset" -C build/llama-src ;; esac
+          srv=$(find build/llama-src -type f \( -name llama-server -o -name llama-server.exe \) | head -1)
+          test -n "$srv" || { echo "llama-server not found in $asset"; find build/llama-src | head -50; exit 1; }
+          cp -a "$(dirname "$srv")"/. build/llama/
+          ls -la build/llama | head -40
+          "build/llama/$(basename "$srv")" --version
+      - name: Icon
+        run: uv run --with pillow python packaging/make_icon.py
+      - name: Build the app
+        run: uv run pyinstaller packaging/bracket.spec --noconfirm --distpath dist --workpath build/work
+      - name: Smoke test the built app (empty data folder, real model download, real proposals)
+        run: |
+          case "${{ runner.os }}" in
+            macOS)   exe=dist/bracket.app/Contents/MacOS/bracket ;;
+            Windows) exe=dist/bracket/bracket.exe ;;
+            *)       exe=dist/bracket/bracket ;;
+          esac
+          uv run python packaging/smoke.py "$exe"
+      - name: Package
+        run: |
+          mkdir -p out
+          case "${{ runner.os }}" in
+            macOS)
+              mkdir -p dmg && cp -R dist/bracket.app dmg/ && ln -s /Applications dmg/Applications
+              hdiutil create -volname bracket -srcfolder dmg -ov -format UDZO "out/bracket-${{ matrix.name }}.dmg" ;;
+            Windows)
+              7z a -tzip "out/bracket-${{ matrix.name }}.zip" ./dist/bracket >/dev/null ;;
+            *)
+              tar -C dist -czf "out/bracket-${{ matrix.name }}.tar.gz" bracket ;;
+          esac
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with: { name: "bracket-${{ matrix.name }}", path: out/* }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, pattern: "bracket-*", merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

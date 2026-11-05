@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+# build outputs (packaging/bracket.spec, the build workflow)
+build/
+dist/
+out/
+dmg/
+# library/texts/ is filled by the release build; keep the folder, not the files
+library/texts/*.json
+# legacy settings file from earlier versions; settings now live in the per-user data folder
+.env
+data/
