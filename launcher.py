@@ -231,7 +231,7 @@ def _app_window(url: str, server, thread: threading.Thread, server_app, check_af
     try:
         light = server_app.config.THEME == "light"   # open in the theme's colour: no dark flash before a light page
         window = webview.create_window("bracket", url, width=1440, height=920, min_size=(960, 640),
-                                       background_color="#f7f5ef" if light else "#0a0a0b", text_select=True, js_api=bridge)
+                                       background_color="#ffffff" if light else "#0a0a0b", text_select=True, js_api=bridge)
     except Exception as e:  # noqa: BLE001
         print(f"bracket: no app window ({e}); opening the browser", flush=True)
         return None

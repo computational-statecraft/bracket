@@ -1,42 +1,32 @@
-/* bracket — project site. The same type, palette and restraint as the app: a near-black room screen (or paper, in
-   light mode), Cormorant Garamond for the words being negotiated, DM Sans small caps for everything around them. */
+/* bracket — project site. The same type, palette and restraint as the app: a near-black room screen (or a white page,
+   in light mode), Cormorant Garamond for the words being negotiated, DM Sans small caps for everything around them. */
 
 @font-face { font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 600; font-display: swap; src: url('fonts/CormorantGaramond.woff2') format('woff2'); }
 @font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 400 600; font-display: swap; src: url('fonts/DMSans.woff2') format('woff2'); }
 
 :root {
-  /* light: paper */
-  --bg: #f5f2eb; --bg-raised: #fbf9f4; --fg: #15151a; --dim: rgba(21,21,26,.66); --faint: rgba(21,21,26,.48);
-  --ghost: rgba(21,21,26,.28); --hair: rgba(21,21,26,.14); --wash: rgba(21,21,26,.06);
-  --brass: #876733; --brass-strong: #6d5226; --crimson: #a5283c;
-  --brk: #8a6420; --brk-rest: rgba(138,100,32,.62); --brk-mark: rgba(138,100,32,.5);
-  --screen: #fdfcf8; --screen-fg: #15151a; --screen-rest: rgba(21,21,26,.34);
-  --spot-dim: rgba(245,242,235,.62);
-  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --ease: cubic-bezier(.2,0,0,1);
-  --gx: clamp(16px, 5vw, 72px);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0a0a0b; --bg-raised: #111113; --fg: #ffffff; --dim: rgba(255,255,255,.62); --faint: rgba(255,255,255,.42);
-    --ghost: rgba(255,255,255,.22); --hair: rgba(255,255,255,.12); --wash: rgba(255,255,255,.07);
-    --brass: #a8916a; --brass-strong: #c4ab80; --crimson: #d4495d;
-    --brk: #d9c49b; --brk-rest: rgba(217,196,155,.55); --brk-mark: rgba(217,196,155,.45);
-    --screen: #0a0a0b; --screen-fg: #ffffff; --screen-rest: rgba(255,255,255,.32);
-    --spot-dim: rgba(0,0,0,.6);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
+  /* dark by default: the room screen */
   --bg: #0a0a0b; --bg-raised: #111113; --fg: #ffffff; --dim: rgba(255,255,255,.62); --faint: rgba(255,255,255,.42);
   --ghost: rgba(255,255,255,.22); --hair: rgba(255,255,255,.12); --wash: rgba(255,255,255,.07);
   --brass: #a8916a; --brass-strong: #c4ab80; --crimson: #d4495d;
   --brk: #d9c49b; --brk-rest: rgba(217,196,155,.55); --brk-mark: rgba(217,196,155,.45);
   --screen: #0a0a0b; --screen-fg: #ffffff; --screen-rest: rgba(255,255,255,.32);
   --spot-dim: rgba(0,0,0,.6);
+  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ease: cubic-bezier(.2,0,0,1);
+  --gx: clamp(16px, 5vw, 72px);
   color-scheme: dark;
+}
+/* light: plain white page */
+:root[data-theme="light"] {
+  --bg: #ffffff; --bg-raised: #ffffff; --fg: #14141a; --dim: rgba(20,20,26,.68); --faint: rgba(20,20,26,.5);
+  --ghost: rgba(20,20,26,.28); --hair: rgba(20,20,26,.13); --wash: rgba(20,20,26,.045);
+  --brass: #876733; --brass-strong: #6d5226; --crimson: #a5283c;
+  --brk: #8a6420; --brk-rest: rgba(138,100,32,.62); --brk-mark: rgba(138,100,32,.5);
+  --screen: #ffffff; --screen-fg: #14141a; --screen-rest: rgba(20,20,26,.34);
+  --spot-dim: rgba(255,255,255,.72);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -76,7 +66,7 @@ nav a { text-decoration: none; color: var(--dim); } nav a:hover { color: var(--f
 .specimen .note { margin-top: 14px; font: 500 9.5px/1.6 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--crimson); }
 .hero h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(42px, 7vw, 92px); line-height: 1.02; letter-spacing: -.005em; margin: 0 0 28px; max-width: 14ch; }
 .hero h1 .b { color: var(--brk); font-weight: 400; }
-.hero .lede { font-size: clamp(18px, 2.1vw, 22px); color: var(--dim); max-width: 36em; margin: 0 0 36px; }
+.hero .lede { font-size: clamp(16px, 1.5vw, 18px); color: var(--dim); max-width: 36em; margin: 0 0 36px; }
 .hero .lede strong { color: var(--fg); font-weight: 500; }
 .actions { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); text-decoration: none; border-radius: 2px; cursor: pointer; font: 500 11px/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; }
