@@ -63,3 +63,26 @@ def test_files_that_cannot_be_opened_say_why():
 def test_markdown_and_text_open_as_they_are():
     r = docfiles.import_file("my-draft_v2.md", "## Heading\n\n1. First.\r\n".encode())
     assert r["ok"] and r["text"].startswith("## Heading") and "\r" not in r["text"] and r["title"] == "my draft v2"
+
+
+def test_a_crafted_session_cannot_carry_markup_or_odd_types():
+    evil = '<img src=x onerror="alert(1)">'
+    saved = json.dumps({"format": "bracket-session", "doc": {"title": "T", "sentences": [
+        {"id": 'a"]<b>', "text": evil, "state": evil, "kind": "script", "version": evil, "label": 5,
+         "history": [{"version": evil, "at": evil, "via": evil, "text": "x"}, "junk"],
+         "dissents": [{"version": evil, "who": evil, "note": evil}]},
+        {"id": "a]<b>", "text": "second"}, "not a sentence"]}})
+    r = docfiles.import_file("evil.json", saved.encode())
+    s1, s2 = r["doc"]["sentences"]
+    assert s1["id"] == "ab" and s2["id"] == "abx"                       # plain, unique tokens
+    assert s1["state"] == "draft" and s1["kind"] == "p" and s1["version"] == 1
+    assert s1["history"][0]["version"] == 1 and len(s1["history"]) == 1 and s1["dissents"][0]["version"] == 1
+    assert s1["text"] == evil and s1["label"] == "5"                  # text is kept as text; the page escapes it
+
+
+def test_a_word_file_that_unpacks_to_an_absurd_size_is_refused():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("word/document.xml", b"\0" * (docfiles.DOCX_PART_MAX + 1))
+    assert len(buf.getvalue()) < 1_000_000                       # small on disk, huge unpacked
+    assert "Word" in docfiles.import_file("bomb.docx", buf.getvalue())["error"]

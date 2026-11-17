@@ -1,0 +1,8 @@
+# Proposes updates to the pinned CI actions (each is pinned to a commit, so updates come as reviewable PRs).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      actions: { patterns: ["*"] }
