@@ -23,7 +23,6 @@ No terminal, no Python, no separate installs.
 |---|---|
 | Mac with Apple silicon (M1 or later) | `bracket-macOS-arm64.dmg` (about 175 MB) |
 | Windows 10 or 11 (64-bit) | `bracket-Windows-x64.zip` (about 150 MB) |
-| Linux (x86-64, glibc 2.35 or later, e.g. Ubuntu 22.04+) | `bracket-Linux-x64.tar.gz` (about 210 MB) |
 
 **2. Open it.**
 
@@ -33,7 +32,7 @@ No terminal, no Python, no separate installs.
   [Known limitations](#known-limitations-and-where-setup-may-not-be-smooth) for why.)
 - **Windows:** right-click the `.zip`, choose **Extract All**, open the extracted `bracket` folder and double-click
   **bracket.exe**. If SmartScreen says "Windows protected your PC", click **More info → Run anyway**. You do this once.
-- **Linux:** extract the archive and run `bracket/bracket`.
+- **Linux:** no packaged app; run from source (see [From source](#from-source)): it opens in your web browser.
 
 bracket opens in its own window (on Linux, in your web browser). Closing the window, or **Quit** in Settings, stops
 it. Press **F** on the setup screen, or ⌘⇧F / Ctrl+Shift+F while drafting, for full screen on the projector.
@@ -252,10 +251,10 @@ start.
 
 **Releases** are built by `.github/workflows/build.yml`. A push to a working branch runs the unit tests on Linux only.
 A push to `main`, a pull request, a tag or a manual run (**Actions → build → Run workflow**) runs everything: tests on
-macOS, Windows and Linux; the app built for each platform with llama.cpp bundled; and each build smoke-tested as a new
+macOS, Windows and Linux; the Mac and Windows apps built with llama.cpp bundled; and each build smoke-tested as a new
 user would meet it (an empty data folder, a model downloaded through the app, real proposals from the built-in engine,
 opening a Word draft, saving and reopening a session, adding agreed language, the app's own window). A manual run with
-**Keep the built apps** ticked keeps the three apps for 3 days, for trying them out; pushing a tag `v*` publishes them
+**Keep the built apps** ticked keeps the two apps for 3 days, for trying them out; pushing a tag `v*` publishes them
 as a GitHub Release. The limits are there because private repositories have a small allowance of Actions minutes and
 storage (the three apps are about 0.5 GB per run).
 
@@ -368,8 +367,8 @@ maintainers; verify them before citing.
 - **Unsigned apps.** The builds are not yet signed with an Apple Developer ID or a Windows code-signing certificate,
   so macOS Gatekeeper and Windows SmartScreen warn on first open (the one-time steps are above). Signing needs a paid
   Apple Developer account and a Windows certificate; the build workflow is the place to add them.
-- **Platforms built.** Apple-silicon Macs, 64-bit Windows and x86-64 Linux. Intel Macs and ARM Windows or Linux are not
-  built (llama.cpp publishes binaries for them, so they can be added to the build matrix).
+- **Platforms built.** Apple-silicon Macs and 64-bit Windows. Linux runs from source; Intel Macs and ARM Windows are
+  not built (llama.cpp publishes binaries for them, so they can be added to the build matrix).
 - **No GPU on Windows and Linux.** The bundled engine there is llama.cpp's CPU build, which works everywhere but is
   slower; on those machines prefer E2B or E4B. Macs use the GPU (Metal). For a GPU elsewhere, run Ollama or LM Studio
   and choose it in Settings.

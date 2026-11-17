@@ -1,4 +1,4 @@
-# Tests, builds the desktop app for macOS, Windows and Linux, and checks each build the way a new user would meet it:
+# Tests on macOS, Windows and Linux; builds the desktop app for macOS and Windows, and checks each build the way a new user would meet it:
 # an empty data folder, a model downloaded through the app, real proposals from the built-in engine.
 # Pushing a tag v* publishes the builds as a GitHub Release.
 #
@@ -6,7 +6,7 @@
 # times over) and of artifact storage:
 #   - a push to a working branch: unit tests on Linux only;
 #   - a push to main, a pull request, a tag or a manual run (Actions → build → Run workflow): tests on all three
-#     platforms, then the full build and smoke tests;
+#     platforms, then the full build and smoke tests of the Mac and Windows apps (Linux runs from source);
 #   - finished apps are stored only for a manual run with "keep the apps" ticked (3 days) or a tag (1 day: the
 #     release job copies them to the Release, whose files do not count against Actions storage). A newer push to
 #     the same branch cancels a run.
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       keep_apps:
-        description: "Keep the built apps for 3 days, to download and try (about 0.5 GB of Actions storage)"
+        description: "Keep the built apps for 3 days, to download and try (about 0.3 GB of Actions storage)"
         type: boolean
         default: false
 
@@ -61,7 +61,6 @@ jobs:
         include:
           - { os: macos-latest, name: macOS-arm64, llama: macos-arm64.tar.gz }
           - { os: windows-latest, name: Windows-x64, llama: win-cpu-x64.zip }
-          - { os: ubuntu-22.04, name: Linux-x64, llama: ubuntu-x64.tar.gz }
     runs-on: ${{ matrix.os }}
     defaults:
       run: { shell: bash }
