@@ -23,7 +23,9 @@ paintBtn();
    longer) in the institutional register, and three each in the plain and formal registers. A proposal may carry the
    flags the app's check would add; "dropped" lists what the check would remove before the room saw it. */
 const TREE = {
-  note: { min: -1, max: 3, levels: {
+  note: { min: -2, max: 2, levels: {
+    '-2': { shorter: ['hear of', 'learn of', 'see'], same: ['have heard of', 'have been told of', 'have learned of'], longer: ['have received reports of', 'have heard reports of', 'have been told in general terms of'],
+            plain: ['have heard about', 'know of', 'have been told about'], formal: ['have been apprised of', 'have received information on', 'have been made aware of'] },
     '-1': { shorter: ['see', 'mark', 'observe'], same: ['take note of', 'are aware of', 'have seen'], longer: ['have been informed of', 'are generally aware of', 'have taken account of'],
          plain: ['know about', 'see', 'have heard about'], formal: ['take cognizance of', 'are cognizant of', 'duly observe'] },
     0: { shorter: ['see', 'observe', 'mark'], same: ['observe', 'take account of', 'are aware of'], longer: ['note with interest', 'take careful note of', 'have taken note of'],
@@ -32,10 +34,10 @@ const TREE = {
          plain: ['accept', 'admit', 'grant'], formal: ['acknowledge with appreciation', 'duly acknowledge', 'formally acknowledge'] },
     2: { shorter: ['recognize', 'value', 'credit'], same: ['recognize', 'appreciate', 'value'], longer: ['recognize and appreciate', 'fully recognize', 'recognize with appreciation'],
          plain: ['value', 'appreciate', 'see the worth of'], formal: ['recognize with appreciation', 'duly recognize', 'express our recognition of'] },
-    3: { shorter: ['affirm', 'confirm', 'back'], same: ['affirm', 'endorse', 'confirm'], longer: ['affirm our support for', 'strongly affirm', 'affirm and endorse'],
-         plain: ['back', 'support', 'stand behind'], formal: ['affirm our endorsement of', 'solemnly affirm', 'formally affirm'] },
   } },
-  work: { min: -1, max: 2, levels: {
+  work: { min: -2, max: 2, levels: {
+    '-2': { shorter: ['discuss', 'weigh', 'note'], same: ['discuss', 'reflect on', 'exchange views on'], longer: ['hold initial discussions on', 'exchange preliminary views on', 'reflect further on'],
+            plain: ['talk over', 'mull over', 'hear ideas on'], formal: ['hold preliminary consultations on', 'engage in an exchange of views on', 'take note of proposals for'] },
     '-1': { shorter: ['consider', 'explore', 'study'], same: ['explore', 'consider', 'look into'], longer: ['explore the possibility of', 'give consideration to', 'examine options for'],
             plain: ['think about', 'look at', 'talk about'], formal: ['give due consideration to', 'examine the feasibility of', 'consider the merits of'] },
     0: { shorter: ['seek', 'pursue', 'build'], same: ['pursue', 'seek', 'strive for'],
@@ -48,8 +50,8 @@ const TREE = {
   } },
 };
 // strength is shown relative to the wording the rail opened on
-const STRENGTH_WORDS = { '-3': 'weakest', '-2': 'weaker', '-1': 'weak', 0: 'same', 1: 'strong', 2: 'stronger', 3: 'strongest' };
-const strengthWord = r => STRENGTH_WORDS[Math.max(-3, Math.min(3, r.level - r.base))];
+const STRENGTH_WORDS = { '-2': 'weaker', '-1': 'weak', 0: 'same', 1: 'strong', 2: 'stronger' };
+const strengthWord = r => STRENGTH_WORDS[r.level - r.base];
 
 /* ---------------- the statement ---------------- */
 const START = () => ({
@@ -167,7 +169,7 @@ function openRail(sid, tid) {
 function dial(kind, delta) {
   const r = S.rail, tree = TREE[r.tid];
   if (kind === 'strength') {
-    const min = tree.min, max = tree.max;
+    const min = Math.max(tree.min, r.base - 2), max = Math.min(tree.max, r.base + 2);
     const next = Math.max(min, Math.min(max, r.level + delta));
     if (next === r.level) { toast(delta > 0 ? 'That is the strongest wording here' : 'That is the weakest wording here'); return; }
     r.level = next;
