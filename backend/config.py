@@ -23,7 +23,7 @@ from pathlib import Path
 
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 
 def _default_data_dir() -> Path:
@@ -49,8 +49,9 @@ os.environ.setdefault("NLTK_DATA", os.pathsep.join(str(p) for p in NLTK_DIRS))
 # ---------- the settings themselves ----------
 # name: (environment variables, in order of preference; default)
 SPEC: dict[str, tuple[tuple[str, ...], object]] = {
-    # local tier: "builtin" runs llama.cpp inside the app; "ollama" and "openai" talk to a server you run yourself
-    "local_engine": (("BRACKET_LOCAL_ENGINE",), "builtin"),
+    # local tier: "builtin" runs llama.cpp inside the app; "ollama" and "openai" talk to a server you run yourself;
+    # "apple" is Apple's on-device model (Apple Intelligence). Unset until the user chooses on the setup screen.
+    "local_engine": (("BRACKET_LOCAL_ENGINE",), ""),
     "local_model": (("BRACKET_LOCAL_MODEL",), ""),            # a catalog id (builtin) or the server's model name
     "local_model_path": (("BRACKET_LOCAL_MODEL_PATH",), ""),  # builtin only: any GGUF file on disk
     "local_url": (("BRACKET_LOCAL_URL", "OLLAMA_URL"), ""),   # ollama/openai: the server's address
@@ -68,6 +69,7 @@ SPEC: dict[str, tuple[tuple[str, ...], object]] = {
     # the room
     "title": (("BRACKET_TITLE",), ""),       # pre-fills the session title
     "org": (("BRACKET_ORG",), ""),           # a small label under the mark, e.g. your organization's name
+    "theme": (("BRACKET_THEME",), "dark"),   # dark (default) | light | system
     "session": (("BRACKET_SESSION",), ""),   # a session name; "new" forces a fresh one
 }
 SECRET = {"cloud_key"}
@@ -147,7 +149,10 @@ def public() -> dict:
 
 def reload() -> None:
     g = globals()
-    g["LOCAL_ENGINE"] = value("local_engine").lower()
+    eng = value("local_engine").lower()
+    if not eng and (value("local_model_path") or any(MODELS_DIR.glob("*.gguf"))):
+        eng = "builtin"   # a model downloaded before choosing was a thing (or by hand): keep using it
+    g["LOCAL_ENGINE"] = eng
     g["LOCAL_MODEL"] = value("local_model")
     g["LOCAL_MODEL_PATH"] = value("local_model_path")
     url = value("local_url")
@@ -169,6 +174,7 @@ def reload() -> None:
 
     g["DOC_TITLE"] = value("title")
     g["ORG"] = value("org")
+    g["THEME"] = value("theme").lower() if value("theme").lower() in ("system", "light", "dark") else "dark"
     g["SESSION_ID"] = value("session")
 
 
@@ -179,5 +185,5 @@ CLOUD_API = CLOUD_KEY = CLOUD_MODEL = CLOUD_AUTH = CLOUD_KEY_HEADER = BEDROCK_AP
 CLOUD_BASE_URL: str | None = None
 CLOUD_TIMEOUT_S = 20.0
 CLOUD_ENABLED = CLAUDE_PREFETCH = False
-DOC_TITLE = ORG = SESSION_ID = ""
+DOC_TITLE = ORG = SESSION_ID = THEME = ""
 reload()

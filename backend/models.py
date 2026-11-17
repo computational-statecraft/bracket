@@ -133,7 +133,7 @@ def listing() -> dict:
             "chosen": chosen_label(), "custom_path": config.LOCAL_MODEL_PATH}
 
 
-def start_download(model_id: str) -> dict:
+def start_download(model_id: str, use: bool = False) -> dict:
     e = BY_ID.get(model_id)
     if e is None:
         return {"ok": False, "error": f"unknown model {model_id}"}
@@ -147,7 +147,7 @@ def start_download(model_id: str) -> dict:
     if free < need:
         return {"ok": False, "error": f"not enough disk space: {e['label']} needs {need:.1f} GB more, {free:.1f} GB free"}
     _jobs[model_id] = {"state": "running", "done": have, "total": e["bytes"], "rate": 0, "error": None}
-    _tasks[model_id] = asyncio.get_running_loop().create_task(_download(e))
+    _tasks[model_id] = asyncio.get_running_loop().create_task(_download(e, use))
     return {"ok": True, "state": "running"}
 
 
@@ -158,7 +158,7 @@ def cancel_download(model_id: str) -> dict:
     return {"ok": True}
 
 
-async def _download(e: dict) -> None:
+async def _download(e: dict, use: bool = False) -> None:
     job = _jobs[e["id"]]
     dest = path_of(e)
     part = dest.with_suffix(".part")
@@ -181,8 +181,9 @@ async def _download(e: dict) -> None:
             raise ValueError("checksum mismatch: the file was corrupted in transit and has been deleted; try again")
         os.replace(part, dest)
         job.update(state="done", done=e["bytes"])
-        if not config.LOCAL_MODEL or not BY_ID.get(config.LOCAL_MODEL) or not installed(BY_ID[config.LOCAL_MODEL]):
-            config.write_file({"local_model": e["id"]})   # the first model downloaded becomes the one in use
+        if use or not config.LOCAL_ENGINE or (config.LOCAL_ENGINE == "builtin" and not (BY_ID.get(config.LOCAL_MODEL) and installed(BY_ID[config.LOCAL_MODEL]))):
+            # chosen for use, or nothing else is in use yet: run this one
+            config.write_file({"local_engine": "builtin", "local_model": e["id"], "local_model_path": None})
         if config.LOCAL_ENGINE == "builtin":
             from . import engine
 

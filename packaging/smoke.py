@@ -75,6 +75,50 @@ def wait_for(pred, timeout: float, what: str, proc, data):
     fail(f"timed out after {timeout:.0f} s waiting for {what} (last: {last})", proc, data)
 
 
+def shoot(out: Path, p) -> None:
+    """Photograph the screen once the window has loaded and styled itself (CI only looks; nothing depends on it)."""
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < 60 and p.poll() is None:
+        if "WINDOW CHECK PASSED" in (out.read_text(encoding="utf-8", errors="replace") if out.exists() else ""):
+            break
+        time.sleep(0.5)
+    time.sleep(2)
+    try:
+        from PIL import ImageGrab
+
+        shots = Path(os.environ.get("BRACKET_SHOTS", "shots"))
+        shots.mkdir(exist_ok=True)
+        ImageGrab.grab().save(shots / f"window-{sys.platform}.png")
+        print("screenshot saved", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"no screenshot ({e})", flush=True)
+
+
+def window_check(exe: str) -> None:
+    """Open the real app window, let the app confirm the page loaded in it and the page→app bridge answers."""
+    data = Path(tempfile.mkdtemp(prefix="bracket-window-"))
+    step(f"open {exe} in its own window")
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("BRACKET_", "ANTHROPIC_"))}
+    out = data.parent / f"{data.name}-output.txt"
+    env["BRACKET_WINDOW_HOLD"] = "8"
+    try:
+        p = subprocess.Popen([exe, "--window-check", "30", "--port", "8797", "--data", str(data)], env=env,
+                             stdout=open(out, "wb"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        shoot(out, p)
+        code = p.wait(timeout=240)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        code = "timeout"
+    text = out.read_text(encoding="utf-8", errors="replace") if out.exists() else ""
+    logs = "".join(p.read_text(encoding="utf-8", errors="replace") for p in (data / "logs").glob("*.log"))
+    print(text[-3000:], logs[-3000:], sep="\n")
+    if code != 0 or "WINDOW CHECK PASSED" not in text + logs:
+        print(f"\nWINDOW CHECK FAILED (exit {code})")
+        sys.exit(1)
+    print("styled:", "window styled" in text + logs)
+    print("\nWINDOW CHECK PASSED")
+
+
 def main() -> None:
     for stream in (sys.stdout, sys.stderr):   # a Windows console's code page cannot print every character
         stream.reconfigure(encoding="utf-8", errors="replace")
@@ -82,7 +126,10 @@ def main() -> None:
     ap.add_argument("exe")
     ap.add_argument("--model", default="qwen2.5-0.5b")
     ap.add_argument("--no-model", action="store_true")
+    ap.add_argument("--window", action="store_true", help="only check the app's own window opens the page")
     a = ap.parse_args()
+    if a.window:
+        return window_check(a.exe)
 
     data = Path(tempfile.mkdtemp(prefix="bracket-smoke-"))
     global OUT
@@ -113,14 +160,56 @@ def main() -> None:
     if len(seg["sentences"]) != 3:
         fail(f"segmentation: {seg}", proc, data)
 
-    step("precedent library (bundled)")
+    step("agreed language: starts empty; a document added through the app is found")
     lib = st["library"]
     print(lib)
-    if not lib["ok"] or lib["docs"] < 10:
-        fail(f"the library is missing or small: {lib}", proc, data)
-    sent = "We reaffirm our commitment to the purposes and principles of the Charter of the United Nations."
+    if lib["ok"]:
+        fail(f"the app should ship with an empty library: {lib}", proc, data)
+    adopted = ("1. We reaffirm our commitment to the peaceful settlement of disputes in accordance with international law.\n\n"
+               "2. We will continue to strengthen cooperation on maritime safety among all members.")
+    r = ok(httpx.post(f"{BASE}/api/library/add", params={"name": "adopted.md", "body": "Forum", "title": "Smoke Declaration", "date": "2025-05-01"},
+                      content=adopted.encode(), headers=H, timeout=60))
+    print("added:", r)
+    sent = "We reaffirm our commitment to the peaceful settlement of disputes."
     hits = wait_for(lambda: ok(httpx.get(f"{BASE}/api/precedents", params={"sentence": sent}, timeout=60))["hits"], 90, "precedents", proc, data)
     print(f"{len(hits)} precedents · e.g. {hits[0]['cites'][0]['cite']}: {hits[0]['text'][:120]}")
+
+    step("import a Word draft; export the statement as Word, Markdown and a re-openable session")
+    import io
+    import zipfile
+
+    def tiny_docx() -> bytes:
+        W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        body = (f'<w:document xmlns:w="{W}"><w:body>'
+                '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Purpose</w:t></w:r></w:p>'
+                '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Aim:</w:t></w:r><w:r><w:t xml:space="preserve"> We note the progress made. We act.</w:t></w:r></w:p>'
+                '</w:body></w:document>')
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("word/document.xml", body)
+        return buf.getvalue()
+
+    imp = ok(httpx.post(f"{BASE}/api/import", params={"name": "draft.docx"}, content=tiny_docx(), headers=H, timeout=60))
+    print("imported:", imp)
+    if imp["kind"] != "text" or "## Purpose" not in imp["text"] or "**Aim:**" not in imp["text"]:
+        fail(f"Word import lost the structure: {imp}", proc, data)
+    seg = ok(httpx.post(f"{BASE}/api/segment", json={"text": imp["text"], "structured": True}, headers=H, timeout=30))
+    httpx.post(f"{BASE}/api/snapshot", json={"doc": {"title": "Smoke", "sentences": [{**x, "history": [], "dissents": []} for x in seg["sentences"]]}}, headers=H, timeout=10)
+    docx = httpx.get(f"{BASE}/api/export", params={"fmt": "docx"}, timeout=30)
+    with zipfile.ZipFile(io.BytesIO(docx.content)) as z:
+        if "We note the progress made." not in z.read("word/document.xml").decode():
+            fail("the Word export does not contain the statement", proc, data)
+    session = ok(httpx.get(f"{BASE}/api/export", params={"fmt": "json"}, timeout=30))
+    back = ok(httpx.post(f"{BASE}/api/import", params={"name": "session.json"}, content=json.dumps(session).encode(), headers=H, timeout=30))
+    if back["kind"] != "session" or len(back["doc"]["sentences"]) != len(seg["sentences"]):
+        fail(f"a saved session does not re-open: {back}", proc, data)
+    print(f"docx {len(docx.content)} bytes · session re-opens with {len(back['doc']['sentences'])} sentences")
+
+    step("models already on this computer (Ollama, Apple's on-device model)")
+    opts = ok(httpx.get(f"{BASE}/api/local/options", timeout=30))
+    print("ollama:", {k: opts["ollama"][k] for k in ("running", "url")}, "· apple:", opts["apple"], "· recommended:", opts["recommended"])
+    if opts["current"]["chosen"]:
+        fail(f"a fresh install should not have a model chosen yet: {opts['current']}", proc, data)
 
     step("built-in engine present")
     m = ok(httpx.get(f"{BASE}/api/models", timeout=10))
@@ -131,7 +220,7 @@ def main() -> None:
 
     if not a.no_model:
         step(f"download {a.model} through the app")
-        r = ok(httpx.post(f"{BASE}/api/models/{a.model}/download", headers=H, timeout=10))
+        r = ok(httpx.post(f"{BASE}/api/models/{a.model}/download", params={"use": "true"}, headers=H, timeout=10))
         if not r.get("ok"):
             fail(f"download refused: {r}", proc, data)
 

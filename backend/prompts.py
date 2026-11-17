@@ -16,7 +16,7 @@ RULES = (
 
 
 def strength_text(strength: int, target: str | None = None) -> str:
-    """The strength dial runs -1..2 without a ladder, but across a ladder's full length (e.g. -3..+6) with one."""
+    """The strength dial runs -2..2: weaker, weak, same, strong, stronger. A ladder rung, when known, names the target force."""
     if strength <= -2:
         s = "much weaker"
     else:

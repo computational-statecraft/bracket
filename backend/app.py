@@ -17,11 +17,11 @@ import sys
 import threading
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import cloud_llm, config, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
+from . import apple_llm, cloud_llm, config, docfiles, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
 from .nlp import Sentence, align, split_sentences
 
 FRONT = config.ROOT / "frontend"
@@ -87,6 +87,7 @@ async def status():
         "packaged": config.FROZEN,
         "data_dir": str(config.DATA_DIR),
         "org": config.ORG,
+        "theme": config.THEME,
         "session": store.SESSION,
         "title": (snap or {}).get("title") or config.DOC_TITLE,   # the saved session's title, else the title setting
         "resumable": len(snap.get("sentences", [])) if snap else 0,
@@ -124,14 +125,79 @@ async def put_settings(changes: dict):
     return {"settings": config.public()}
 
 
+@app.get("/api/local/options")
+async def local_options():
+    """Every way to run the local tier, what is already on this computer first: Ollama's models (if Ollama is
+    running), Apple's on-device model (or why it is unavailable), models bracket has downloaded, then downloads."""
+    ollama, apple = await asyncio.gather(local_llm.ollama_models(), asyncio.to_thread(apple_llm.status))
+    builtin = models.listing()
+    installed = [m for m in builtin["models"] if m["installed"] and not m["hidden"]]
+    if ollama["models"]:
+        rec = {"engine": "ollama", "model": local_llm.preferred_ollama(ollama["models"])}
+    elif apple["available"]:
+        rec = {"engine": "apple", "model": ""}
+    elif installed:
+        rec = {"engine": "builtin", "model": installed[-1]["id"]}
+    else:
+        rec = {"engine": "builtin", "model": next(m["id"] for m in builtin["models"] if m["recommended"])}
+    return {"current": {"engine": config.LOCAL_ENGINE, "model": config.LOCAL_MODEL, "label": local_llm.model_name(),
+                        "chosen": bool(config.LOCAL_ENGINE), "fixed": config.source_of("local_engine").startswith("env:")},
+            "ollama": ollama, "apple": apple, "builtin": {**builtin, "engine": engine.status()}, "recommended": rec}
+
+
+class UseIn(BaseModel):
+    engine: str
+    model: str = ""
+
+
+@app.post("/api/local/use")
+async def local_use(body: UseIn):
+    """Run the local tier on this choice from now on (remembered in settings)."""
+    eng = body.engine
+    if eng == "builtin":
+        e = models.BY_ID.get(body.model)
+        if not e or not models.installed(e):
+            return JSONResponse({"ok": False, "error": "that model is not downloaded"}, status_code=400)
+        config.write_file({"local_engine": "builtin", "local_model": body.model, "local_model_path": None})
+        asyncio.create_task(engine.ensure())
+    elif eng == "ollama":
+        if not body.model:
+            return JSONResponse({"ok": False, "error": "which Ollama model?"}, status_code=400)
+        url = config.LOCAL_URL if config.LOCAL_ENGINE == "ollama" and config.LOCAL_URL else local_llm.OLLAMA_DEFAULT
+        config.write_file({"local_engine": "ollama", "local_model": body.model, "local_url": url})
+        await engine.stop()
+    elif eng == "apple":
+        st = await asyncio.to_thread(apple_llm.status, 0)
+        if not st["available"]:
+            return JSONResponse({"ok": False, "error": st["reason"]}, status_code=400)
+        config.write_file({"local_engine": "apple", "local_model": None})
+        await engine.stop()
+    else:
+        return JSONResponse({"ok": False, "error": f"unknown engine {eng}"}, status_code=400)
+    store.log("local.use", {"engine": eng, "model": body.model})
+    asyncio.create_task(local_llm.warm())
+    return {"ok": True, "engine": config.LOCAL_ENGINE, "label": local_llm.model_name()}
+
+
+_focus_hook = None   # set by the launcher: bring the app's window forward when it is opened a second time
+
+
+@app.post("/api/focus")
+def focus():
+    if _focus_hook:
+        _focus_hook()
+    return {"ok": True, "window": bool(_focus_hook)}
+
+
 @app.get("/api/models")
 def list_models():
     return {**models.listing(), "engine": engine.status(), "local_engine": config.LOCAL_ENGINE}
 
 
 @app.post("/api/models/{model_id}/download")
-async def download_model(model_id: str):
-    res = models.start_download(model_id)
+async def download_model(model_id: str, use: bool = False):
+    """Start (or resume) a download; use=true runs the model as soon as it has arrived and checked out."""
+    res = models.start_download(model_id, use=use)
     store.log("model.download", {"model": model_id, **res})
     return JSONResponse(res, status_code=200 if res["ok"] else 400)
 
@@ -161,35 +227,9 @@ async def delete_model(model_id: str):
     return res
 
 
-_library_job: dict = {"state": "idle", "log": []}
-
-
 @app.get("/api/library")
 def library_status():
-    return {**library.status(), "job": _library_job}
-
-
-@app.post("/api/library/fetch")
-def library_fetch(force: bool = False):
-    """Download the starter library's documents into the data folder (those the app already ships are skipped)."""
-    if _library_job["state"] == "running":
-        return _library_job
-
-    def run():
-        from . import library_cli
-
-        try:
-            failed = library_cli.fetch([], force=force, progress=lambda m: _library_job["log"].append(m.strip()))
-            _library_job.update(state="done", failed=failed)
-        except Exception as e:  # noqa: BLE001
-            _library_job.update(state="failed", error=str(e)[:200])
-        library.reset()
-        threading.Thread(target=library.get, daemon=True).start()
-
-    _library_job.clear()
-    _library_job.update(state="running", log=[])
-    threading.Thread(target=run, daemon=True).start()
-    return _library_job
+    return library.status()
 
 
 @app.post("/api/library/add")
@@ -381,8 +421,8 @@ async def propose_stream(request: Request, tier: str, sentence: str, strength: i
             async for ev in events:
                 if await request.is_disconnected():
                     break
-                if "delta" in ev:
-                    acc += ev["delta"]
+                if "delta" in ev or "replace" in ev:
+                    acc = ev["replace"] if "replace" in ev else acc + ev["delta"]
                     yield f"event: delta\ndata: {json.dumps({'text': acc})}\n\n"
                 elif "error" in ev:
                     store.log(kind, {"source": source, "error": ev["error"], "ms": ev.get("ms")}, sentence_id)
@@ -442,5 +482,34 @@ def export(fmt: str = "json"):
             for d in s.get("dissents", []):
                 lines.append(f"    - DISSENT (v{d.get('version')}, {d.get('who','')}): {d.get('note','')}")
         return PlainTextResponse("\n".join(lines), media_type="text/markdown")
+    if fmt == "docx":
+        doc = store.load_snapshot() or {"sentences": []}
+        sents = doc.get("sentences", [])
+        agreed = sum(1 for s in sents if s.get("state") == "agreed")
+        open_brackets = sum(s.get("text", "").count("[") for s in sents)
+        note = f"{agreed} of {len(sents)} sentences agreed" + (f" · {open_brackets} in brackets" if open_brackets else "") + f" · session {store.SESSION}"
+        data = docfiles.to_docx(doc.get("title") or config.DOC_TITLE or "Untitled session", sents, note)
+        return Response(data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    if fmt == "json":
+        # a saved session: the draft as it stands (re-openable from the setup screen) and the full event log
+        log = json.loads(store.export("json")[0])
+        doc = store.load_snapshot() or {"sentences": []}
+        out = {"format": docfiles.SESSION_FORMAT, "version": config.VERSION, "session": store.SESSION,
+               "title": doc.get("title") or config.DOC_TITLE, "doc": doc, "events": log["events"]}
+        return PlainTextResponse(json.dumps(out, ensure_ascii=False, indent=1), media_type="application/json")
     text, mt = store.export(fmt)
     return PlainTextResponse(text, media_type=mt)
+
+
+@app.post("/api/import")
+async def import_file(request: Request, name: str):
+    """Open a draft (Word .docx, Markdown or text, PDF, HTML) or a saved bracket session (.json), sent as the raw body.
+    A draft comes back as text for the paste box, its structure kept; a session comes back whole."""
+    data = await request.body()
+    if not data:
+        return JSONResponse({"ok": False, "error": "the file is empty"}, status_code=400)
+    if len(data) > 25_000_000:
+        return JSONResponse({"ok": False, "error": "the file is too large (over 25 MB)"}, status_code=400)
+    res = await asyncio.to_thread(docfiles.import_file, name, data)
+    store.log("import", {"name": name, "ok": res["ok"], "kind": res.get("kind"), "error": res.get("error")})
+    return JSONResponse(res, status_code=200 if res["ok"] else 400)
