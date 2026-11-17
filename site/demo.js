@@ -345,7 +345,7 @@ const STEPS = [
 // what each step's spotlight falls on, in order; a function, because the page changes as the visitor works
 const SPOT = [
   () => '[data-t="note"]',
-  () => '.panel .dials', () => '.panel .dials', () => '.panel .dials',
+  () => '.panel', () => '.panel', () => '.panel',
   () => '.panel .grid',
   () => '.row[data-id="s3"]',
   () => (S.mode === 'bracket' ? '.panel.brkp' : '.row[data-id="s3"] [data-b]'),
