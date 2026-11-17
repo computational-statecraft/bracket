@@ -321,25 +321,25 @@ stage.addEventListener('click', e => {
 /* ---------------- the guided tour ---------------- */
 const kbd = s => `<kbd>${s}</kbd>`;
 const STEPS = [
-  { title: 'Open proposals', body: `<p>This is what the room sees: the statement, sentence by sentence. Double-click the word <strong>note</strong> in sentence 1. (On a touch screen, tap it.)</p>`,
+  { title: 'Open proposals', body: `<p>Double-click <strong>note</strong> in sentence 1. (On a touch screen, tap it.)</p>`,
     done: e => e.type === 'open' && e.tid === 'note' },
-  { title: 'Make it stronger', body: `<p>Three proposals for “note” appear beneath it, at the same strength. Press ${kbd('→')} to ask for stronger wording.</p>`,
+  { title: 'Make it stronger', body: `<p>Press ${kbd('→')} for stronger wording.</p>`,
     done: e => e.type === 'dial' && e.kind === 'strength' },
-  { title: 'Walk the ladder', body: `<p>“Note” sits on a ladder of force drawn from diplomatic practice: <em>note → take note of → acknowledge → recognize → affirm → reaffirm → declare</em>. Keep pressing ${kbd('→')} until you reach <strong>recognize</strong>. ${kbd('←')} walks back down. The rest of the sentence never changes.</p>`,
+  { title: 'Walk the ladder', body: `<p>Keep pressing ${kbd('→')} until <strong>recognize</strong>. ${kbd('←')} goes back.</p>`,
     done: e => e.type === 'dial' && S.rail && S.rail.tid === 'note' && S.rail.level === 3 },
-  { title: 'Longer, shorter, plainer', body: `<p>${kbd('↑')} asks for longer wording and ${kbd('↓')} for shorter. ${kbd('R')} switches the register between plain, institutional and formal diplomatic. Try one.</p>`,
+  { title: 'Longer, shorter, plainer', body: `<p>${kbd('↑')} longer, ${kbd('↓')} shorter, ${kbd('R')} changes the register.</p>`,
     done: e => e.type === 'dial' && (e.kind === 'length' || e.kind === 'register') },
-  { title: 'Choose one', body: `<p>${kbd('⇥')} or the numbers ${kbd('1')}–${kbd('3')} move between proposals; ${kbd('↵')} accepts one. You can also click it. Changed words are marked in brass, and the sentence gains a new version.</p><p class="small">Or press ${kbd('⇧↵')} to keep the proposal beside the original, in brackets, for the room to decide.</p>`,
+  { title: 'Choose one', body: `<p>${kbd('⇥')} moves between proposals; ${kbd('↵')} accepts one.</p>`,
     done: e => e.type === 'accept' || e.type === 'bracket-open' },
-  { title: 'Disagreement stays visible', body: `<p>Sentence 3 holds unsettled wording in square brackets: <span style="color:var(--brk)">[encourage / urge]</span>. Click sentence 3, then press ${kbd('⇧↵')} to try to mark it agreed.</p>`,
+  { title: 'Open brackets', body: `<p>Click sentence 3 and press ${kbd('⇧↵')} to agree it.</p>`,
     done: e => e.type === 'blocked' || (e.type === 'agree' && e.sid === 's3') },
-  { title: 'Settle the bracket', body: `<p>A sentence with an open bracket cannot be agreed. Double-click the bracket, choose a wording with ${kbd('↑')} ${kbd('↓')}, and press ${kbd('↵')} to settle it.</p>`,
+  { title: 'Settle the bracket', body: `<p>Double-click the bracket, pick with ${kbd('↑')} ${kbd('↓')}, press ${kbd('↵')}.</p>`,
     done: e => e.type === 'settle' && e.sid === 's3' },
-  { title: 'Agree it', body: `<p>Now ${kbd('⇧↵')} marks sentence 3 agreed. Editing an agreed sentence returns it to draft: nothing is agreed until everything is agreed.</p>`,
+  { title: 'Agree it', body: `<p>Press ${kbd('⇧↵')} to agree sentence 3.</p>`,
     done: e => e.type === 'agree' && e.sid === 's3' },
-  { title: 'Any phrase, not only a word', body: `<p>Double-click <strong>work towards</strong> in sentence 2. Phrases work the same way: ${kbd('←')} for something weaker, like <em>explore</em>; ${kbd('→')} for something stronger, like <em>commit to</em>.</p>`,
+  { title: 'Any phrase', body: `<p>Double-click <strong>work towards</strong> in sentence 2.</p>`,
     done: e => e.type === 'open' && e.tid === 'work' },
-  { title: 'That is the loop', body: `<p>Accept or reject the proposals for sentence 2, then agree sentences 1 and 2 to finish the statement.</p><p>Everything you did is in the record below the guide. The app keeps the same record, and at the end of a session saves the statement, each sentence's history and any dissent.</p>`,
+  { title: 'Finish', body: `<p>Accept a proposal, then agree sentences 1 and 2.</p>`,
     done: e => e.type === 'agree' && e.all, final: true },
 ];
 // what each step's spotlight falls on, in order; a function, because the page changes as the visitor works
@@ -370,7 +370,7 @@ function showStep() {
   $('#gcount').textContent = finished ? 'Done' : `Step ${step + 1} of ${STEPS.length}`;
   $('#gtitle').textContent = finished ? 'The statement is agreed' : s.title;
   $('#gbody').innerHTML = finished
-    ? `<p class="done">Every sentence is agreed.</p><p>That is [bracket]: people decide every word, the machine offers alternatives on request, and the record keeps what was offered and refused. <a href="#download">Download the app</a> to use it with your own drafts, and your own model.</p>`
+    ? `<p>People chose every word. <a href="#download">Download [bracket]</a></p>`
     : s.body;
   $('#gback').disabled = step === 0 && !finished;
   $('#gnext').hidden = finished || s.final;
@@ -385,10 +385,6 @@ function emit(e) {
 }
 $('#gnext').addEventListener('click', () => { if (step < STEPS.length - 1) { step++; showStep(); } });
 $('#gback').addEventListener('click', () => { if (finished) { finished = false; } else if (step > 0) step--; showStep(); });
-$('#greset').addEventListener('click', () => {
-  S.doc = START(); S.focus = 's1'; S.mode = 'rest'; S.rail = null; S.brk = null; S.changed = null; S.undo = [];
-  step = 0; finished = false; logEl.innerHTML = ''; t0 = Date.now(); record('session.begin', '5 sentences'); render(); showStep();
-});
 record('session.begin', '5 sentences');
 render(); showStep();
 
