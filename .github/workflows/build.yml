@@ -7,8 +7,9 @@
 #   - a push to a working branch: unit tests on Linux only;
 #   - a push to main, a pull request, a tag or a manual run (Actions → build → Run workflow): tests on all three
 #     platforms, then the full build and smoke tests;
-#   - finished apps are stored only for a manual run (3 days) or a tag (1 day: the release job copies them to the
-#     Release, whose files do not count against Actions storage). A newer push to the same branch cancels a run.
+#   - finished apps are stored only for a manual run with "keep the apps" ticked (3 days) or a tag (1 day: the
+#     release job copies them to the Release, whose files do not count against Actions storage). A newer push to
+#     the same branch cancels a run.
 name: build
 
 on:
@@ -17,6 +18,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      keep_apps:
+        description: "Keep the built apps for 3 days, to download and try (about 0.5 GB of Actions storage)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -46,29 +52,9 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest -q
 
-  library:
-    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "${{ env.PYTHON_VERSION }}" }
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --locked
-      - name: Fetch the precedent library
-        run: |
-          uv run python -m backend.library_cli fetch --out library/texts 2>&1 | tee fetch.log
-          n=$(ls library/texts/*.json | wc -l)
-          total=$(python -c "import json;print(len(json.load(open('library/sources.json'))['sources']))")
-          echo "### Precedent library: $n of $total documents" >> "$GITHUB_STEP_SUMMARY"
-          grep -E "FAILED|EMPTY" fetch.log | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
-          test "$n" -ge 20   # a build with a thin library is a broken build
-      - uses: actions/upload-artifact@v4
-        with: { name: library-texts, path: library/texts/*.json, retention-days: 1 }   # only passed to the build jobs
-
   build:
     if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-    needs: [test, library]
+    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -81,8 +67,6 @@ jobs:
       run: { shell: bash }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with: { name: library-texts, path: library/texts }
       - uses: actions/setup-python@v5
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
       - uses: astral-sh/setup-uv@v5
@@ -128,7 +112,7 @@ jobs:
           esac
           uv run --no-sync python packaging/smoke.py "$exe" --window
       - name: Package
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        if: inputs.keep_apps || startsWith(github.ref, 'refs/tags/')
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
@@ -142,7 +126,7 @@ jobs:
           esac
           ls -la out
       - uses: actions/upload-artifact@v4   # ~0.5 GB for the three apps: kept briefly, and only when wanted
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        if: inputs.keep_apps || startsWith(github.ref, 'refs/tags/')
         with:
           name: "bracket-${{ matrix.name }}"
           path: out/*

@@ -186,7 +186,9 @@ class _Bridge:
         return True
 
     def save_files(self, files):
-        """[{name, text}] → saved in the Downloads folder (a browser download does not exist in a native window)."""
+        """[{name, text} or {name, b64}] → saved in the Downloads folder (a browser download does not exist in a
+        native window). Returns the paths written."""
+        import base64
         from pathlib import Path
 
         try:
@@ -204,7 +206,10 @@ class _Bridge:
             while path.exists():
                 n += 1
                 path = folder / f"{stem}-{n}{path.suffix}"
-            path.write_text(str(f["text"]), encoding="utf-8")
+            if f.get("b64") is not None:
+                path.write_bytes(base64.b64decode(f["b64"]))
+            else:
+                path.write_text(str(f.get("text", "")), encoding="utf-8")
             saved.append(str(path))
         return saved
 
@@ -224,8 +229,9 @@ def _app_window(url: str, server, thread: threading.Thread, server_app, check_af
         return None
     bridge = _Bridge()
     try:
+        light = server_app.config.THEME == "light"   # open in the theme's colour: no dark flash before a light page
         window = webview.create_window("bracket", url, width=1440, height=920, min_size=(960, 640),
-                                       background_color="#0a0a0b", text_select=True, js_api=bridge)
+                                       background_color="#f7f5ef" if light else "#0a0a0b", text_select=True, js_api=bridge)
     except Exception as e:  # noqa: BLE001
         print(f"bracket: no app window ({e}); opening the browser", flush=True)
         return None

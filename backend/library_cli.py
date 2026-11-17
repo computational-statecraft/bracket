@@ -1,13 +1,14 @@
-"""Builds the agreed-language library: downloads the documents in library/sources.json (or takes your own files),
-keeps their paragraphs, and writes each document to <folder>/<id>.json for review. The folder is the data folder's
-library/ unless --out says otherwise (the release build uses --out library/texts to ship the library in the app).
+"""Builds the agreed-language library from documents your group has adopted: your own files, or a list of URLs.
+Each document becomes <folder>/<id>.json (its paragraphs, numbered as in the source) for review; the folder is the
+data folder's library/ unless --out says otherwise. bracket ships with an empty library.
 
-    python -m backend.library_cli fetch [ids…] [--force] [--topic REGEX] [--out DIR]
-    python -m backend.library_cli add FILE --body EU --title "…" --date 2026-06-19 [--url …] [--topic REGEX]
+    python -m backend.library_cli add FILE --body UN --title "…" --date 2026-06-19 [--url …] [--topic REGEX]
+    python -m backend.library_cli fetch --sources my-sources.json [ids…] [--force] [--topic REGEX] [--out DIR]
     python -m backend.library_cli list
     python -m backend.library_cli search "words"
 
-The setup screen's "Download" button runs the same fetch. --topic keeps only paragraphs that match a regular
+The setup screen's "Add a document" does the same as add. A sources file is {"sources": [{"id", "body", "title",
+"date", "url", optional "urls" (fallbacks) and "topic"}]}. --topic keeps only paragraphs that match a regular
 expression (case-insensitive), for a library on one subject.
 
 The text kept is the document's own wording, unedited apart from joining lines broken by the PDF layout; nothing is
@@ -27,7 +28,6 @@ from pathlib import Path
 
 from . import config
 
-SOURCES = config.ROOT / "library" / "sources.json"
 NUM = re.compile(r"^\s*(\d{1,3})\s*[.)]\s+")
 
 
@@ -183,12 +183,13 @@ def _write(meta: dict, paras: list[dict], out: Path) -> Path:
     return path
 
 
-def fetch(ids: list[str], force: bool = False, topic: str | None = None, out: Path | None = None, progress=print) -> int:
-    """Download the sources into out (default: the data folder's library). Returns the number that failed."""
+def fetch(sources_file: Path, ids: list[str], force: bool = False, topic: str | None = None, out: Path | None = None, progress=print) -> int:
+    """Download the documents listed in sources_file into out (default: the data folder's library). Returns the
+    number that failed."""
     import httpx
 
     out = out or config.USER_LIBRARY
-    sources = json.loads(SOURCES.read_text(encoding="utf-8"))["sources"]
+    sources = json.loads(Path(sources_file).read_text(encoding="utf-8"))["sources"]
     if ids:
         sources = [s for s in sources if s["id"] in ids]
     failed = 0
@@ -223,7 +224,7 @@ def fetch(ids: list[str], force: bool = False, topic: str | None = None, out: Pa
                 continue
             if not paras:
                 failed += 1
-                progress(f"  EMPTY    {s['id']}: no paragraph kept ({kind}); check the url in library/sources.json")
+                progress(f"  EMPTY    {s['id']}: no paragraph kept ({kind}); check its url")
                 continue
             _write({k: s[k] for k in ("id", "body", "title", "date", "url")}, paras, out)
             progress(f"  fetched  {s['id']}: {len(paras)} paragraphs")
@@ -252,6 +253,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m backend.library_cli", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("fetch")
+    f.add_argument("--sources", type=Path, required=True, help="a JSON file listing the documents to fetch")
     f.add_argument("ids", nargs="*")
     f.add_argument("--force", action="store_true")
     f.add_argument("--topic", help="keep only paragraphs matching this regular expression")
@@ -270,7 +272,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if args.cmd == "fetch":
-        failed = fetch(args.ids, args.force, args.topic, args.out)
+        failed = fetch(args.sources, args.ids, args.force, args.topic, args.out)
         return 1 if (failed and args.strict) else 0
     if args.cmd == "add":
         return add(args.file, args.body, args.title, args.date, args.url, args.topic)

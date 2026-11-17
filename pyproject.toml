@@ -1,6 +1,6 @@
 [project]
 name = "bracket"
-version = "0.3.0"
+version = "0.4.0"
 description = "A drafting table for rooms that have to agree: people write, the machine only rewords."
 license = "Apache-2.0"
 readme = "README.md"

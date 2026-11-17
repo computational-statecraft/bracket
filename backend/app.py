@@ -17,11 +17,11 @@ import sys
 import threading
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import apple_llm, cloud_llm, config, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
+from . import apple_llm, cloud_llm, config, docfiles, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
 from .nlp import Sentence, align, split_sentences
 
 FRONT = config.ROOT / "frontend"
@@ -87,6 +87,7 @@ async def status():
         "packaged": config.FROZEN,
         "data_dir": str(config.DATA_DIR),
         "org": config.ORG,
+        "theme": config.THEME,
         "session": store.SESSION,
         "title": (snap or {}).get("title") or config.DOC_TITLE,   # the saved session's title, else the title setting
         "resumable": len(snap.get("sentences", [])) if snap else 0,
@@ -226,35 +227,9 @@ async def delete_model(model_id: str):
     return res
 
 
-_library_job: dict = {"state": "idle", "log": []}
-
-
 @app.get("/api/library")
 def library_status():
-    return {**library.status(), "job": _library_job}
-
-
-@app.post("/api/library/fetch")
-def library_fetch(force: bool = False):
-    """Download the starter library's documents into the data folder (those the app already ships are skipped)."""
-    if _library_job["state"] == "running":
-        return _library_job
-
-    def run():
-        from . import library_cli
-
-        try:
-            failed = library_cli.fetch([], force=force, progress=lambda m: _library_job["log"].append(m.strip()))
-            _library_job.update(state="done", failed=failed)
-        except Exception as e:  # noqa: BLE001
-            _library_job.update(state="failed", error=str(e)[:200])
-        library.reset()
-        threading.Thread(target=library.get, daemon=True).start()
-
-    _library_job.clear()
-    _library_job.update(state="running", log=[])
-    threading.Thread(target=run, daemon=True).start()
-    return _library_job
+    return library.status()
 
 
 @app.post("/api/library/add")
@@ -507,5 +482,34 @@ def export(fmt: str = "json"):
             for d in s.get("dissents", []):
                 lines.append(f"    - DISSENT (v{d.get('version')}, {d.get('who','')}): {d.get('note','')}")
         return PlainTextResponse("\n".join(lines), media_type="text/markdown")
+    if fmt == "docx":
+        doc = store.load_snapshot() or {"sentences": []}
+        sents = doc.get("sentences", [])
+        agreed = sum(1 for s in sents if s.get("state") == "agreed")
+        open_brackets = sum(s.get("text", "").count("[") for s in sents)
+        note = f"{agreed} of {len(sents)} sentences agreed" + (f" · {open_brackets} in brackets" if open_brackets else "") + f" · session {store.SESSION}"
+        data = docfiles.to_docx(doc.get("title") or config.DOC_TITLE or "Untitled session", sents, note)
+        return Response(data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    if fmt == "json":
+        # a saved session: the draft as it stands (re-openable from the setup screen) and the full event log
+        log = json.loads(store.export("json")[0])
+        doc = store.load_snapshot() or {"sentences": []}
+        out = {"format": docfiles.SESSION_FORMAT, "version": config.VERSION, "session": store.SESSION,
+               "title": doc.get("title") or config.DOC_TITLE, "doc": doc, "events": log["events"]}
+        return PlainTextResponse(json.dumps(out, ensure_ascii=False, indent=1), media_type="application/json")
     text, mt = store.export(fmt)
     return PlainTextResponse(text, media_type=mt)
+
+
+@app.post("/api/import")
+async def import_file(request: Request, name: str):
+    """Open a draft (Word .docx, Markdown or text, PDF, HTML) or a saved bracket session (.json), sent as the raw body.
+    A draft comes back as text for the paste box, its structure kept; a session comes back whole."""
+    data = await request.body()
+    if not data:
+        return JSONResponse({"ok": False, "error": "the file is empty"}, status_code=400)
+    if len(data) > 25_000_000:
+        return JSONResponse({"ok": False, "error": "the file is too large (over 25 MB)"}, status_code=400)
+    res = await asyncio.to_thread(docfiles.import_file, name, data)
+    store.log("import", {"name": name, "ok": res["ok"], "kind": res.get("kind"), "error": res.get("error")})
+    return JSONResponse(res, status_code=200 if res["ok"] else 400)

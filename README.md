@@ -69,14 +69,18 @@ built-in engine runs on the CPU (see [Known limitations](#known-limitations-and-
 
 ## In the room
 
-Put the browser on the projector, press **F** for full screen, paste the draft and press **Begin** (⌘↵ / Ctrl+↵).
-Markdown structure survives: headings, bold lead-ins (`**Purpose:** …`), numbered and bulleted items.
+Put bracket's window on the projector and press **F** for full screen. The setup screen takes you through four steps:
+**the draft** (paste it, open a file, or drop one on the box), **the local model**, **Claude** (optional) and **agreed
+language** (optional). Then press **Begin** (⌘↵ / Ctrl+↵). Structure survives: headings, bold lead-ins
+(`**Purpose:** …`), numbered and bulleted items. **System · Light · Dark** at the foot of the setup screen, or ⌥T at any
+time, switches between a dark screen (best on most projectors) and a light one.
 
 The sentence being worked on is white at reading height; the rest of the text is grey around it.
 **Double-click a word or select a phrase** and the proposals open beneath it:
 
-- **Agreed language** at the top: up to three sentences from adopted texts, quoted exactly with their source and
-  paragraph, aligned to your selection. Use one (↵) or keep it beside your wording in brackets (⇧↵).
+- **Agreed language** at the top, if you have added documents: up to three sentences from texts your group has
+  already adopted, quoted exactly with their source and paragraph, aligned to your selection. Use one (↵) or keep it
+  beside your wording in brackets (⇧↵).
 - **The local model's proposals** in a grid, at the current **strength** (←→), **length** (↑↓) and **register**
   (`R`: plain, institutional, formal diplomatic). On a verb that carries force, the strength dial walks a ladder:
   *note → acknowledge → recognize → reaffirm*, *invite → encourage → urge → call upon → request → require*,
@@ -103,10 +107,22 @@ everything is agreed, and the bar along the bottom shows how much is.
 | ⌥H / Alt+H | the sentence's history |
 | ⌥↑↓ / Alt+↑↓ | move between sentences |
 | ⌘Z / Ctrl+Z, ⌘⇧Z / Ctrl+Shift+Z | undo / redo (typing, proposals, splits, joins, states) |
-| ⌥E / Alt+E | save the statement (`.md`) and the full event log (`.json`) to Downloads |
+| ⌥E / Alt+E | save the statement (`.docx`), the statement with its history (`.md`) and the session (`.json`) to Downloads |
+| ⌥T / Alt+T | light or dark |
 | ⌥Q / Alt+Q | end the session (asks first, saves the record) |
 
-The draft is saved continuously. If the computer or browser restarts, open bracket again and press **Resume**.
+The draft is saved continuously. If the computer restarts, open bracket again and press **Resume**.
+
+## Opening and saving
+
+- **Open a draft** from the setup screen (**Open a file…**, or drop it on the draft box): Word (`.docx`), Markdown or
+  text, PDF, or a web page. Headings, numbered and bulleted items, and bold lead-ins are kept; a Word document's title
+  becomes the session's name. Older Word files (`.doc`) need saving as `.docx` first.
+- **Save** with ⌥E at any time, and automatically when the session ends (⌥Q). Three files go to Downloads:
+  - the statement as a **Word document** (`.docx`), with its structure and any brackets still open, to send on;
+  - the statement with **each sentence's history and the dissents** (`.md`);
+  - the **session** (`.json`): the draft exactly as it stands, with every state, version, bracket and dissent, and the
+    full record of what was proposed, accepted and refused. Open it again from the setup screen to continue.
 
 ## What the machine may and may not do
 
@@ -127,20 +143,21 @@ commitments. `uv run python -m backend.show_prompts` prints exactly what they ar
 
 Everything that happens is appended to a local SQLite log: every proposal shown, accepted and rejected (including
 those the validator dropped, with the model's raw output), every edit, bracket, precedent, state change and dissent.
-⌥E saves the statement with each sentence's history and the dissents as Markdown, and the event log as JSON. The log
+⌥E saves the statement with each sentence's history and the dissents as Markdown, and the session with the full log as
+JSON (see [Opening and saving](#opening-and-saving)). The log
 records what was offered and refused as well as what was chosen, so a session can be studied afterwards. Note that the
 Markdown export shows each sentence's versions but not which edits came from a model; the JSON log has that.
 
 ## Privacy: what stays on this computer
 
-- **Everything, by default.** The local model, the lexicon, the precedent library and the log all run and live on
+- **Everything, by default.** The local model, the lexicon, your agreed-language documents and the log all run and live on
   your machine. bracket listens only on `127.0.0.1`, and rejects requests that are not addressed to this machine or
   that come from another website.
 - **Only with Claude switched on**, and only when the facilitator presses `C` or rewrites a whole sentence: the
   sentence being worked on (and, for a rewrite, its neighbours) is sent to the Anthropic API under your key. Nothing
   else is sent. `Fetch Claude ahead` in Settings trades this for speed by asking for every opened word; it is off by default.
-- **Network use otherwise:** downloading a model (Hugging Face) and, if you press it, the starter library (the
-  publishers' websites). Nothing else, and no telemetry.
+- **Network use otherwise:** downloading a model (Hugging Face), only when you choose one. Nothing else, and no
+  telemetry.
 
 Where things are kept:
 
@@ -159,17 +176,15 @@ press **Save**. The setup screen tests it with a real request. In **Settings** y
 reach Claude through their own gateway in front of AWS Bedrock can set **Route**, **Gateway base URL** and the key
 header there.
 
-## The precedent library
+## Agreed language
 
-The app ships with a starter library of adopted texts of NATO, the European Union, the G7 and the G20, 2014–2026
-(`library/sources.json` lists 33), with each paragraph quoted exactly and cited by body, title, year and paragraph
-number. The current build includes 31: no working public link was found for the NATO 2022 Strategic Concept or the G7
-leaders' statement of 6 December 2023. Add a working URL in `sources.json`, or add either document by hand in Settings.
+bracket can show, above the proposals, sentences from texts your group has already adopted: earlier declarations,
+conclusions, communiqués. They are quoted exactly, cited by body, title, year and paragraph, and never rewritten by a
+model. bracket ships with none: add your own on the setup screen (**Agreed language → Add a document**; PDF, Word, web
+page, text or Markdown). They are kept in the data folder's `library/`.
+
 Search is lexical (SQLite full-text search with stemming), so it finds shared wording, not shared meaning: a precedent
 that says the same thing in other words will not show.
-
-Add your own documents (PDF, HTML, text or Markdown) in **Settings → Add a document to the library**. They are stored in
-the data folder's `library/`.
 
 ## Programmable
 
@@ -202,8 +217,7 @@ server-sent events), precedents, the log and exports. See [`docs/API.md`](docs/A
 `--data DIR`, `--doctor` (check every tier with real calls), `--version`.
 
 **Editable parts.** The strength ladders are a plain list in `backend/lexicon.py` (`LADDERS`); the model catalog is
-`backend/models.py`; the prompt is `backend/prompts.py`; the guard is `backend/validate.py`; the library sources are
-`library/sources.json`.
+`backend/models.py`; the prompt is `backend/prompts.py`; the guard is `backend/validate.py`.
 
 ## From source
 
@@ -224,7 +238,7 @@ uv run python launcher.py
 
 From source, the built-in engine needs llama.cpp's `llama-server`: install it (for example `brew install llama.cpp`),
 point `BRACKET_LLAMA_SERVER` at it, or choose **Ollama** in Settings. WordNet downloads into the data folder on first
-start. The precedent library can be downloaded from the setup screen.
+start.
 
 | Task | Command |
 |---|---|
@@ -232,24 +246,30 @@ start. The precedent library can be downloaded from the setup screen.
 | check the setup with real calls | `uv run python -m backend.doctor` |
 | local model vs Claude, side by side | `uv run python -m backend.compare` |
 | what the models are sent | `uv run python -m backend.show_prompts` |
-| the library from the command line | `uv run python -m backend.library_cli fetch \| add \| list \| search` |
+| agreed language from the command line | `uv run python -m backend.library_cli add \| fetch \| list \| search` |
 | build the app | `uv sync --group build && uv run pyinstaller packaging/bracket.spec` |
 
 **Releases** are built by `.github/workflows/build.yml`. A push to a working branch runs the unit tests on Linux only.
 A push to `main`, a pull request, a tag or a manual run (**Actions → build → Run workflow**) runs everything: tests on
-macOS, Windows and Linux; the library fetched; the app built for each platform with llama.cpp bundled; and each build
-smoke-tested as a new user would meet it (an empty data folder, a model downloaded through the app, real proposals from
-the built-in engine, the app's own window). A manual run keeps the three apps for 3 days, for trying them out; pushing a
-tag `v*` publishes them as a GitHub Release. The limits are there because private repositories have a small allowance
-of Actions minutes and storage (the three apps are about 0.5 GB per run).
+macOS, Windows and Linux; the app built for each platform with llama.cpp bundled; and each build smoke-tested as a new
+user would meet it (an empty data folder, a model downloaded through the app, real proposals from the built-in engine,
+opening a Word draft, saving and reopening a session, adding agreed language, the app's own window). A manual run with
+**Keep the built apps** ticked keeps the three apps for 3 days, for trying them out; pushing a tag `v*` publishes them
+as a GitHub Release. The limits are there because private repositories have a small allowance of Actions minutes and
+storage (the three apps are about 0.5 GB per run).
+
+**The website** is `site/` (plain HTML, CSS and JavaScript; no build step). `.github/workflows/pages.yml` publishes it
+to GitHub Pages when it changes on `main`; turn Pages on once under **Settings → Pages → Source: GitHub Actions**.
+Preview it locally with `python3 -m http.server -d site`.
 
 ```
 backend/    app.py (HTTP API) · config.py (settings) · engine.py (llama.cpp) · models.py (catalog, downloads)
             local_llm.py · cloud_llm.py · prompts.py · validate.py (the guard) · lexicon.py (WordNet, ladders)
-            library.py · library_cli.py (agreed language) · nlp.py · draft.py · store.py (the log) · doctor.py · compare.py
+            library.py · library_cli.py (agreed language) · docfiles.py (open and save Word, sessions) · nlp.py · draft.py
+            store.py (the log) · doctor.py · compare.py
 frontend/   index.html (setup and the live editor) · fonts/
-library/    sources.json · texts/ (filled by the release build)
-launcher.py the desktop entry point          packaging/  PyInstaller spec, icon, smoke test
+site/       the project website                 launcher.py the desktop entry point
+packaging/  PyInstaller spec, icon, smoke test
 ```
 
 ---
@@ -360,8 +380,6 @@ maintainers; verify them before citing.
 - **Speed has not been benchmarked across machines.** The model recommendations are memory-based rules of thumb.
 - **Alt shortcuts on Windows.** bracket takes Alt+letter keys for itself; some browsers or keyboard layouts may
   intercept a few of them.
-- **The starter library's sources can move.** Publishers change URLs; the release build reports any it could not fetch.
-  The texts are official public statements quoted with attribution (see `THIRD_PARTY_NOTICES.md`).
 - **Name.** Other products use "bracket" or "brackets"; search for "computational-statecraft/bracket".
 
 ## Licence

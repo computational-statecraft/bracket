@@ -16,18 +16,33 @@
     --gx:clamp(40px,5.2vw,112px);            /* page margin */
     --gut:clamp(52px,4.6vw,104px);           /* left column for list numbers and states */
     --ease:cubic-bezier(0.2,0,0,1);
+    /* derived tints, so every colour has a light-mode counterpart */
+    --sel:rgba(255,255,255,.2); --fg-82:rgba(255,255,255,.82); --fg-88:rgba(255,255,255,.88); --fg-60:rgba(255,255,255,.6); --fg-40:rgba(255,255,255,.4);
+    --field:rgba(255,255,255,.025); --focus:rgba(255,255,255,.28); --btn-hover:rgba(255,255,255,.86); --void-0:rgba(10,10,11,0);
+    --brk-hi:#efe0bf; --veil:rgba(10,10,11,.96);
+    color-scheme:dark;
+  }
+  /* light: the same room on paper. --void is always the background and --white the ink, whichever the theme */
+  :root[data-theme="light"]{
+    --void:#f7f5ef; --white:#131317; --text-rest:rgba(19,19,23,.36); --dim:rgba(19,19,23,.64); --faint:rgba(19,19,23,.48);
+    --ghost:rgba(19,19,23,.28); --hair:rgba(19,19,23,.14); --wash:rgba(19,19,23,.07);
+    --brass:#7d6030; --crimson:#a5283c; --brk:#86601e; --brk-rest:rgba(134,96,30,.64); --brk-mark:rgba(134,96,30,.5);
+    --sel:rgba(19,19,23,.14); --fg-82:rgba(19,19,23,.82); --fg-88:rgba(19,19,23,.88); --fg-60:rgba(19,19,23,.6); --fg-40:rgba(19,19,23,.42);
+    --field:rgba(19,19,23,.03); --focus:rgba(19,19,23,.3); --btn-hover:rgba(19,19,23,.84); --void-0:rgba(247,245,239,0);
+    --brk-hi:#5f420c; --veil:rgba(247,245,239,.96);
+    color-scheme:light;
   }
   *{box-sizing:border-box}
   [hidden]{display:none!important}
   html,body{margin:0;height:100%;background:var(--void);color:var(--white);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased}
-  ::selection{background:rgba(255,255,255,.2)}
+  ::selection{background:var(--sel)}
   button{font:inherit;color:inherit}
   .caps{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
 
   /* brand: small, top left, on both screens */
   .brand{position:fixed;top:30px;left:var(--gx);z-index:20;display:flex;flex-direction:column;gap:7px;pointer-events:none}
   .brand .line{display:flex;align-items:baseline;gap:14px}
-  .brand .mark{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:.015em;color:rgba(255,255,255,.82)}
+  .brand .mark{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:.015em;color:var(--fg-82)}
   .brand .app{font-family:var(--serif);font-weight:500;font-size:22px;letter-spacing:.01em;color:var(--faint)}
   .brand .rule{width:22px;height:1px;background:var(--crimson)}
   .brand .sub{font-size:9px;letter-spacing:.26em;color:var(--faint)}
@@ -41,13 +56,14 @@
   #docTitle:hover,#docTitle:focus{border-bottom-color:var(--hair)}
   #docTitle:empty::before{content:attr(data-placeholder);color:var(--ghost)}
   .seed-wrap{display:flex;flex-direction:column;gap:12px}
-  #seed{width:100%;min-height:24vh;max-height:46vh;padding:26px 30px;background:rgba(255,255,255,.022);border:1px solid var(--hair);border-radius:2px;outline:none;
-        font-family:var(--serif);font-size:21px;line-height:1.55;color:rgba(255,255,255,.88);resize:vertical;transition:border-color 200ms var(--ease)}
-  #seed:focus{border-color:rgba(255,255,255,.26)}
+  #seed{width:100%;min-height:24vh;max-height:46vh;padding:26px 30px;background:var(--field);border:1px solid var(--hair);border-radius:2px;outline:none;
+        font-family:var(--serif);font-size:21px;line-height:1.55;color:var(--fg-88);resize:vertical;transition:border-color 200ms var(--ease)}
+  #seed:focus{border-color:var(--focus)}
   #seed::placeholder{color:var(--faint)}
   #seedInfo{color:var(--faint);min-height:14px}
   .status{display:flex;flex-direction:column}
-  .status .st{display:grid;grid-template-columns:180px 1fr auto;align-items:baseline;gap:24px;padding:15px 0;border-bottom:1px solid var(--hair)}
+  .status .st{display:grid;grid-template-columns:200px 1fr auto;align-items:start;gap:24px;padding:20px 0;border-bottom:1px solid var(--hair)}
+  .status .st > .k, .status .st > .test{padding-top:2px}
   .status .st:first-child{border-top:1px solid var(--hair)}
   .status .k{color:var(--dim)}
   .status .v{font-size:13px;letter-spacing:.04em;color:var(--white);min-width:0}
@@ -56,12 +72,23 @@
   .status .test{background:none;border:0;padding:0;cursor:pointer;color:var(--faint);transition:color 160ms var(--ease)}
   .status .test:hover{color:var(--white)}
   .actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:baseline;gap:14px;padding:17px 30px;border-radius:1px;cursor:pointer;border:1px solid rgba(255,255,255,.6);background:var(--white);color:var(--void);transition:background 160ms var(--ease),color 160ms var(--ease)}
-  .btn:hover{background:rgba(255,255,255,.86)}
-  .btn.ghost{background:none;color:var(--white);border-color:var(--hair)} .btn.ghost:hover{border-color:rgba(255,255,255,.4)}
+  .btn{display:inline-flex;align-items:baseline;gap:14px;padding:17px 30px;border-radius:1px;cursor:pointer;border:1px solid var(--fg-60);background:var(--white);color:var(--void);transition:background 160ms var(--ease),color 160ms var(--ease)}
+  .btn:hover{background:var(--btn-hover)}
+  .btn.ghost{background:none;color:var(--white);border-color:var(--hair)} .btn.ghost:hover{border-color:var(--fg-40)}
   .btn .kb{opacity:.5;letter-spacing:.1em}
   #ended{display:block;margin-top:16px;color:var(--brass);min-height:13px}
   .setup-foot{display:flex;justify-content:space-between;margin:0 var(--gx) 26px;color:var(--ghost);font-size:10px}
+  .setup-head .eyebrow{color:var(--brass);margin:0}
+  .status .k b{display:inline-block;width:22px;font-weight:500;color:var(--brass)}
+  .status .k em{display:block;margin:6px 0 0 22px;font-style:normal;font-size:9.5px;letter-spacing:.2em;color:var(--ghost)}
+  .status .v .lead-text{display:block;margin:0 0 10px;font-size:12px;color:var(--faint);letter-spacing:.02em}
+  .drop{outline:2px dashed var(--brass);outline-offset:6px}
+  .actions.sticky{position:sticky;bottom:0;z-index:3;padding:18px 0 22px;margin-bottom:-22px;background:linear-gradient(var(--void-0),var(--void) 34%)}
+  .setup-meta{display:flex;flex-wrap:wrap;gap:10px 26px;align-items:baseline;color:var(--ghost);font-size:10px;padding-top:6px;border-top:1px solid var(--hair)}
+  .setup-meta .bad{color:var(--crimson)}
+  .setup-meta button{background:none;border:0;padding:0;cursor:pointer;color:var(--faint);font:inherit;letter-spacing:inherit;text-transform:inherit}
+  .setup-meta button:hover,.setup-meta button.on{color:var(--white)} .setup-meta button.on{border-bottom:1px solid var(--brass)}
+  .theme-pick{display:inline-flex;gap:12px}
 
   /* ---------------- live ---------------- */
   #live{position:fixed;inset:0}
@@ -71,8 +98,8 @@
   #scroll{position:fixed;inset:0;overflow-y:auto;scrollbar-width:none;padding:44vh var(--gx) 52vh var(--gx)}
   #scroll::-webkit-scrollbar{display:none}
   .fade-top,.fade-bot{position:fixed;left:0;right:0;pointer-events:none;z-index:3}
-  .fade-top{top:0;height:210px;background:linear-gradient(var(--void) 50%,rgba(10,10,11,0))}
-  .fade-bot{bottom:0;height:130px;background:linear-gradient(rgba(10,10,11,0),var(--void) 62%)}
+  .fade-top{top:0;height:210px;background:linear-gradient(var(--void) 50%,var(--void-0))}
+  .fade-bot{bottom:0;height:130px;background:linear-gradient(var(--void-0),var(--void) 62%)}
   #table{max-width:min(1640px,100%);display:flex;flex-direction:column}
   .row{display:grid;grid-template-columns:var(--gut) minmax(0,1fr);column-gap:clamp(18px,1.6vw,36px);margin-top:.18em;font-size:var(--fs)}
   .row.brk{margin-top:.95em} .row:first-child{margin-top:0}
@@ -86,15 +113,15 @@
   .lead{margin-bottom:.5em;color:var(--brass);font-size:10.5px;transition:opacity 260ms var(--ease)}
   .sent{margin:0;font-family:var(--serif);font-weight:500;font-size:var(--fs);line-height:1.24;letter-spacing:.004em;color:var(--text-rest);outline:none;white-space:pre-wrap;word-wrap:break-word;caret-color:var(--white);transition:color 260ms var(--ease)}
   .row.h .sent{font-style:italic;font-weight:500;font-size:calc(var(--fs) * .62);letter-spacing:.01em}
-  .row.agreed .sent{color:rgba(255,255,255,.4)}
+  .row.agreed .sent{color:var(--fg-40)}
   .row.focus .sent,.row.focus .gut{color:var(--white)}
   .sent[data-empty]:empty::before{content:'Type a sentence';color:var(--ghost)}
-  .sent .hov{border-bottom:2px solid rgba(255,255,255,.6)}
+  .sent .hov{border-bottom:2px solid var(--fg-60)}
   .sent .alt{color:var(--brk-rest);transition:color 260ms var(--ease)} .row.focus .sent .alt{color:var(--brk)}
   .sent .bk{color:var(--brk-mark);font-weight:400}
   .sent .altcur{border-bottom:2px solid var(--brk)}
   .gut .mk.brk{color:var(--brk)}
-  .addalt{display:flex;align-items:baseline;gap:14px;cursor:pointer;color:var(--brk);font-size:10.5px} .addalt:hover{color:#efe0bf}
+  .addalt{display:flex;align-items:baseline;gap:14px;cursor:pointer;color:var(--brk);font-size:10.5px} .addalt:hover{color:var(--brk-hi)}
   .brkpanel .slot p{color:var(--brk-rest)} .brkpanel .slot.cur p,.brkpanel .slot:hover p{color:var(--brk)}
   .brkpanel .rail{border-left-color:var(--brk-mark)}
   .sent .sel{background:var(--wash);box-shadow:0 0 0 .12em var(--wash);border-radius:1px}
@@ -113,7 +140,7 @@
   .slot.cur p,.slot:hover p{color:var(--white)}
   .slot .caps{font-size:9.5px;color:var(--faint);white-space:nowrap}
   .slot.cur .caps{color:var(--brass)}
-  .slot .chg{color:var(--brass)} .slot.cur .chg{color:#d9c49b}
+  .slot .chg{color:var(--brass)} .slot.cur .chg{color:var(--brk)}
   .slot .flag{color:var(--crimson);margin-left:14px}
   .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5em 1.4em;margin-top:.35em;font-size:calc(var(--fs) * .42)}
   .grid.whole{font-size:calc(var(--fs) * .3)}
@@ -121,7 +148,7 @@
   .cell .n{font-family:var(--sans);font-size:10px;letter-spacing:.1em;color:var(--ghost)}
   .cell p{margin:0;font-family:var(--serif);line-height:1.25;color:var(--dim);transition:color 140ms var(--ease)}
   .cell.cur p,.cell:hover p{color:var(--white)} .cell.cur .n{color:var(--brass)}
-  .cell .chg{color:var(--brass)} .cell.cur .chg{color:#d9c49b}
+  .cell .chg{color:var(--brass)} .cell.cur .chg{color:var(--brk)}
   .cell .src{font-family:var(--sans);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ghost);margin-left:.7em}
   .cell .flag{display:block;margin-top:.2em;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--crimson)}
   .cell.empty p{color:var(--ghost)}
@@ -131,7 +158,7 @@
   .prec{display:grid;grid-template-columns:1.3em minmax(0,1fr);align-items:baseline;cursor:pointer;margin-bottom:.55em}
   .prec .n{font-family:var(--sans);font-size:10px;letter-spacing:.1em;color:var(--ghost)}
   .prec p{margin:0;font-family:var(--serif);line-height:1.3;color:var(--dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;transition:color 140ms var(--ease)}
-  .prec .ph{color:var(--brass)} .prec.cur p,.prec:hover p{color:var(--white)} .prec.cur .ph{color:#d9c49b} .prec.cur .n{color:var(--brass)}
+  .prec .ph{color:var(--brass)} .prec.cur p,.prec:hover p{color:var(--white)} .prec.cur .ph{color:var(--brk)} .prec.cur .n{color:var(--brass)}
   .prec .cite{grid-column:2;margin-top:.25em;font-size:9px;color:var(--ghost)} .prec.cur .cite{color:var(--faint)}
   .prec .cite b{font-weight:400;color:var(--brass)}
   .more{margin-top:.9em;font-size:9.5px;color:var(--faint)}
@@ -145,7 +172,7 @@
   .progress{position:fixed;left:0;bottom:0;height:2px;background:var(--brass);opacity:.7;transition:width 600ms var(--ease);z-index:6}
 
   /* end-of-session confirmation */
-  #confirm{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(10,10,11,.96);flex-direction:column;gap:22px}
+  #confirm{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:var(--veil);flex-direction:column;gap:22px}
   #confirm.on{display:flex}
   #confirm .q{font-family:var(--serif);font-size:clamp(34px,3vw,60px)}
   #confirm .caps{color:var(--dim)}
@@ -161,11 +188,11 @@
   .dl{display:flex;flex-direction:column;gap:8px;margin-top:14px}
   .dlbar{height:2px;background:var(--hair);position:relative;overflow:hidden} .dlbar i{position:absolute;left:0;top:0;bottom:0;background:var(--brass);transition:width 400ms var(--ease)}
   .small-btn{background:none;border:1px solid var(--hair);padding:9px 16px;cursor:pointer;color:var(--white);border-radius:1px;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
-  .small-btn:hover{border-color:rgba(255,255,255,.4)} .small-btn.solid{background:var(--white);color:var(--void);border-color:var(--white)}
+  .small-btn:hover{border-color:var(--fg-40)} .small-btn.solid{background:var(--white);color:var(--void);border-color:var(--white)}
   .small-btn:disabled{opacity:.4;cursor:default}
   .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
-  .field{background:rgba(255,255,255,.03);border:1px solid var(--hair);color:var(--white);padding:9px 12px;font:13px var(--sans);letter-spacing:.02em;border-radius:1px;outline:none;min-width:0}
-  .field:focus{border-color:rgba(255,255,255,.3)} select.field{appearance:auto}
+  .field{background:var(--field);border:1px solid var(--hair);color:var(--white);padding:9px 12px;font:13px var(--sans);letter-spacing:.02em;border-radius:1px;outline:none;min-width:0}
+  .field:focus{border-color:var(--focus)} select.field{appearance:auto}
   #keyIn{flex:1 1 320px}
   #settings{display:flex;flex-direction:column;gap:30px;padding-top:6px}
   #settings h3{margin:0 0 4px;font:500 11px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--brass)}
@@ -187,28 +214,36 @@
 <!-- ======== setup ======== -->
 <section id="setup" aria-label="Setup">
   <div class="setup-col">
-    <div>
+    <div class="setup-head">
+      <p class="eyebrow caps" id="eyebrow">New session</p>
       <h1><span id="docTitle" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Name this session" aria-label="Session title"></span></h1>
       <span id="ended" class="caps"></span>
     </div>
-    <div class="seed-wrap">
-      <textarea id="seed" spellcheck="false" placeholder="Paste the draft. Headings, bold lead-ins and numbered lists are kept as structure."></textarea>
-      <div id="seedInfo" class="caps"></div>
-    </div>
     <div class="status" id="status">
-      <div class="st"><span class="k caps">Lexicon</span><span class="v wait" id="stLex">Checking…</span><span></span></div>
-      <div class="st"><span class="k caps">Local model</span><div class="v wait" id="stLocal">Checking…</div><button class="test caps" id="testLocal">Test</button></div>
-      <div class="st"><span class="k caps">Agreed language</span><div class="v wait" id="stLib">Checking…</div><span></span></div>
-      <div class="st"><span class="k caps">Claude</span><div class="v wait" id="stCloud">Checking…</div><button class="test caps" id="testCloud">Test</button></div>
-      <div class="st"><span class="k caps">Session</span><span class="v" id="stLog">…</span><button class="test caps" id="settingsBtn">Settings</button></div>
+      <div class="st"><span class="k caps"><b>1</b>The draft</span>
+        <div class="v">
+          <textarea id="seed" spellcheck="false" placeholder="Paste the draft, or drop a file here. Headings, bold lead-ins and numbered lists are kept as structure."></textarea>
+          <div class="inline"><button class="small-btn" id="openBtn" type="button">Open a file…</button><span class="muted">Word (.docx), Markdown or text, PDF, or a saved bracket session (.json)</span></div>
+          <div id="seedInfo" class="caps" style="margin-top:12px"></div>
+          <input type="file" id="fileIn" hidden accept=".docx,.md,.markdown,.txt,.pdf,.html,.htm,.json">
+        </div><span></span></div>
+      <div class="st"><span class="k caps"><b>2</b>Local model</span><div class="v wait" id="stLocal">Checking…</div><button class="test caps" id="testLocal">Test</button></div>
+      <div class="st"><span class="k caps"><b>3</b>Claude<em>Optional</em></span><div class="v wait" id="stCloud">Checking…</div><button class="test caps" id="testCloud">Test</button></div>
+      <div class="st"><span class="k caps"><b>4</b>Agreed language<em>Optional</em></span><div class="v wait" id="stLib">Checking…</div><span></span></div>
     </div>
-    <div id="settings" hidden></div>
-    <div class="actions">
+    <div class="actions sticky">
       <button class="btn caps" id="beginBtn">Begin live session <span class="kb" data-kb>⌘↵</span></button>
       <button class="btn ghost caps" id="resumeBtn" hidden></button>
     </div>
+    <div id="settings" hidden></div>
+    <div class="setup-meta caps">
+      <span id="stLex">Lexicon…</span>
+      <span id="stLog"></span>
+      <span class="theme-pick" role="group" aria-label="Appearance"><button type="button" data-theme-set="system">System</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></span>
+      <button type="button" id="settingsBtn">Settings</button>
+    </div>
   </div>
-  <div class="setup-foot caps"><span>F full screen</span><span id="setupSession"></span></div>
+  <div class="setup-foot caps"><span>F full screen · ⌥T light or dark</span><span id="setupSession"></span></div>
 </section>
 
 <!-- ======== live ======== -->
@@ -216,7 +251,7 @@
   <div class="top-right"><span class="title caps" id="headTitle"></span><span class="caps" id="readout"></span></div>
   <div id="scroll"><div id="table"></div></div>
   <div class="fade-top"></div><div class="fade-bot"></div>
-  <div class="keys caps"><span id="hint"></span><span id="keysRight" data-kb>⌥E export · ⌥Q end</span></div>
+  <div class="keys caps"><span id="hint"></span><span id="keysRight" data-kb>⌥E export · ⌥T light / dark · ⌥Q end</span></div>
   <div class="progress" id="progress" style="width:0"></div>
 </section>
 
@@ -288,13 +323,15 @@ async function loadStatus(){
     if (document.activeElement !== $('#docTitle')) $('#docTitle').textContent = st.title || '';
     titleChanged();
     $('#brandOrg').hidden = !st.org; $('#brandOrg').textContent = st.org || '';
-    setV($('#stLex'), st.lexicon.ok ? `Ready · ${st.lexicon.entries.toLocaleString()} entries` : 'Missing', st.lexicon.ok ? '' : 'bad');
+    applyTheme(st.theme || 'system');
+    $('#stLex').textContent = st.lexicon.ok ? `Lexicon ready · ${st.lexicon.entries.toLocaleString()} words` : 'Lexicon missing';
+    $('#stLex').className = st.lexicon.ok ? '' : 'bad';
+    $('#stLog').textContent = 'Saved on this computer'; $('#stLog').title = st.data_dir;
     renderLibrary(st.library || {});
-    setV($('#stLog'), `Logging · ${st.session}`, '', `Saved on this computer in ${st.data_dir}`);
     $('#setupSession').textContent = `${st.session} · v${st.version}`;
     updateBeginLabel();
     refreshLocal(true); checkCloud();
-  }catch(e){ setV($('#stLog'), 'Server unreachable', 'bad', 'Is bracket still running? Open it again from your Applications or Start menu.'); }
+  }catch(e){ $('#stLog').textContent = 'bracket is not answering: open it again from Applications or the Start menu'; $('#stLog').className = 'bad'; }
 }
 
 // ---- local model: what is on this computer first (Ollama, Apple's on-device model, downloads), then downloads ----
@@ -393,24 +430,73 @@ async function checkCloud(){
 $('#testLocal').addEventListener('click', () => refreshLocal(true));
 $('#testCloud').addEventListener('click', checkCloud);
 
-// ---- agreed language: shipped with the app; fetchable here when running from source ----
-let libPoll = null;
+// ---- agreed language: documents the group has already adopted, added on this computer ----
 function renderLibrary(lb){
-  const el = $('#stLib'); clearTimeout(libPoll);
-  const job = lb.job || {};
-  if (job.state === 'running'){
-    el.className = 'v wait'; el.innerHTML = `Downloading the starter library…<small>${esc((job.log || []).slice(-1)[0] || 'starting')}</small>`;
-    libPoll = setTimeout(async () => renderLibrary(await fetch('/api/library').then(r=>r.json())), 1200); return;
-  }
-  if (lb.ok){
-    if (S.status) S.status.library = lb;
-    setV(el, `Ready · ${lb.docs} documents${lb.bodies && lb.bodies.length ? ' · ' + lb.bodies.join(', ') : ''}`, '', 'Precedents are quoted exactly, with their source. Add your own documents in Settings.' + (job.state === 'done' && job.failed ? ` · ${job.failed} source${job.failed > 1 ? 's' : ''} could not be fetched` : ''));
-    return;
-  }
-  el.className = 'v';
-  el.innerHTML = `Not downloaded<small>The starter library: 33 adopted NATO, EU, G7 and G20 texts, 2014–2026, fetched from the publishers' sites (a few MB).</small><div class="inline"><button class="small-btn" id="libBtn">Download</button></div>`;
-  $('#libBtn').addEventListener('click', async () => { await api('/api/library/fetch'); renderLibrary(await fetch('/api/library').then(r=>r.json())); });
+  const el = $('#stLib'); el.className = 'v';
+  if (S.status) S.status.library = lb;
+  const head = lb.ok
+    ? `${lb.docs} document${lb.docs === 1 ? '' : 's'}${lb.bodies && lb.bodies.length ? ' · ' + lb.bodies.join(', ') : ''}<small>Matching sentences are shown above the proposals, quoted exactly with their source.</small>`
+    : `None yet<small>Add texts your group has already adopted (declarations, conclusions, communiqués). When the room works on a sentence, bracket shows matching sentences from them, quoted exactly with their source, never rewritten.</small>`;
+  el.innerHTML = head + `<div class="inline" id="libAddRow"><button class="small-btn" id="libAddBtn" type="button">${lb.ok ? 'Add another' : 'Add a document'}</button></div>`;
+  $('#libAddBtn').addEventListener('click', () => {
+    $('#libAddRow').outerHTML = `<div class="inline"><input class="field" type="file" id="docFile" accept=".pdf,.docx,.html,.htm,.txt,.md"><input class="field" id="docBody" placeholder="Body, e.g. UN" size="12"><input class="field" id="docTitle2" placeholder="Title" size="26"><input class="field" id="docDate" type="date"><button class="small-btn solid" id="docAdd" type="button">Add</button></div><div class="muted" id="docNote" style="margin-top:8px">PDF, Word, web page or text. Its paragraphs are kept as written.</div>`;
+    $('#docAdd').addEventListener('click', addDocument);
+  });
 }
+async function addDocument(){
+  const f = $('#docFile').files[0]; const body = $('#docBody').value.trim(), title = $('#docTitle2').value.trim(), date = $('#docDate').value;
+  if (!f || !body || !title || !date){ $('#docNote').textContent = 'Choose a file and fill in the body, title and date.'; return; }
+  $('#docNote').textContent = 'Reading…';
+  let data = f;
+  if (/\.docx$/i.test(f.name)){   // a Word document: its text first, through the same reader as drafts
+    const r = await fetch('/api/import?' + new URLSearchParams({ name: f.name }), { method: 'POST', headers: { 'X-Bracket': '1' }, body: f }).then(x => x.json()).catch(e => ({ ok: false, error: String(e) }));
+    if (!r.ok){ $('#docNote').textContent = r.error || 'Could not read it'; return; }
+    data = new Blob([r.text]);
+  }
+  const q = new URLSearchParams({ name: f.name.replace(/\.docx$/i, '.md'), body, title, date });
+  const r = await fetch('/api/library/add?' + q, { method: 'POST', headers: { 'X-Bracket': '1' }, body: data }).then(x => x.json()).catch(e => ({ ok: false, error: String(e) }));
+  if (!r.ok){ $('#docNote').textContent = r.error || 'Could not read it'; return; }
+  renderLibrary(await fetch('/api/library').then(x => x.json()));
+}
+
+// ---- appearance: system, light or dark; saved in settings, so the app opens the way it was left ----
+function applyTheme(t){
+  S.theme = t;
+  const dark = t === 'dark' || (t === 'system' && !matchMedia('(prefers-color-scheme: light)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('on', b.dataset.themeSet === t));
+}
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (S.theme === 'system') applyTheme('system'); });
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => { applyTheme(b.dataset.themeSet); api('/api/settings', { theme: b.dataset.themeSet }); }));
+function toggleTheme(){ const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; applyTheme(t); api('/api/settings', { theme: t }); }
+
+// ---- opening a file: a draft into the box, or a saved session to continue ----
+async function openFile(f){
+  if (!f) return;
+  $('#seedInfo').textContent = `Opening ${f.name}…`;
+  const r = await fetch('/api/import?' + new URLSearchParams({ name: f.name }), { method: 'POST', headers: { 'X-Bracket': '1' }, body: f }).then(x => x.json()).catch(e => ({ ok: false, error: String(e) }));
+  if (!r.ok){ $('#seedInfo').textContent = `${f.name}: ${r.error || 'could not be opened'}`; return; }
+  if (r.kind === 'session'){
+    S.imported = { doc: r.doc, title: r.title, name: f.name };
+    $('#seed').value = '';
+    if (r.title && !docTitle()){ $('#docTitle').textContent = r.title; titleChanged(); }
+    const n = r.doc.sentences.length, a = r.doc.sentences.filter(x => x.state === 'agreed').length;
+    $('#seedInfo').textContent = `${f.name} · a saved session · ${n} sentences, ${a} agreed · begin to continue it`;
+  } else {
+    S.imported = null;
+    $('#seed').value = r.text;
+    if (r.title && !docTitle()){ $('#docTitle').textContent = r.title; titleChanged(); }
+    await previewSeed(`${f.name} · ${r.detail}`);
+  }
+  log('import', { name: f.name, kind: r.kind });
+  updateBeginLabel();
+}
+$('#openBtn').addEventListener('click', () => $('#fileIn').click());
+$('#fileIn').addEventListener('change', e => { openFile(e.target.files[0]); e.target.value = ''; });
+const seedBox = $('#seed');
+['dragenter', 'dragover'].forEach(t => seedBox.addEventListener(t, e => { e.preventDefault(); seedBox.classList.add('drop'); }));
+['dragleave', 'drop'].forEach(t => seedBox.addEventListener(t, () => seedBox.classList.remove('drop')));
+seedBox.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) openFile(f); });
 
 // ---- settings ----
 const CLAUDE_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'];
@@ -443,11 +529,7 @@ async function openSettings(){
   </div></div>
   <div><h3>The room</h3><div class="sgrid">
     <label>Label under the mark</label><div>${input('org', 'e.g. your organization (optional)')}</div>
-  </div></div>
-  <div><h3>Add a document to the library</h3><div class="sgrid">
-    <label>File (PDF, HTML, text)</label><div><input class="field" type="file" id="docFile" accept=".pdf,.html,.htm,.txt,.md"></div>
-    <label>Body · title · date</label><div class="inline" style="margin:0"><input class="field" id="docBody" placeholder="e.g. UN" size="8"><input class="field" id="docTitle2" placeholder="Title" size="28"><input class="field" id="docDate" type="date"><button class="small-btn" id="docAdd">Add</button></div>
-    <div class="note" id="docNote">Its paragraphs are quoted exactly, never rewritten.</div>
+    <label>Appearance</label><div>${select('theme', [['system','Follow the computer'],['light','Light'],['dark','Dark (best on most projectors)']])}</div>
   </div></div>
   <div class="inline"><button class="small-btn solid" id="setSave">Save settings</button><button class="small-btn" id="quitBtn">Quit bracket</button><span class="muted">Saved to <code>${esc(file)}</code>. API: <code>${location.origin}/docs</code></span></div>`;
   box.hidden = false; $('#settingsBtn').textContent = 'Close settings';
@@ -464,34 +546,27 @@ async function openSettings(){
     if (r.error){ alert(r.error); return; }
     box.hidden = true; $('#settingsBtn').textContent = 'Settings'; loadStatus();
   });
-  $('#docAdd').addEventListener('click', async () => {
-    const f = $('#docFile').files[0]; const body = $('#docBody').value.trim(), title = $('#docTitle2').value.trim(), date = $('#docDate').value;
-    if (!f || !body || !title || !date){ $('#docNote').textContent = 'Choose a file and fill in the body, title and date.'; return; }
-    $('#docNote').textContent = 'Reading…';
-    const q = new URLSearchParams({ name: f.name, body, title, date });
-    const r = await fetch('/api/library/add?' + q, { method: 'POST', headers: { 'X-Bracket': '1' }, body: f }).then(x => x.json()).catch(e => ({ ok: false, error: String(e) }));
-    $('#docNote').textContent = r.ok ? `Added: ${r.paragraphs} paragraphs.` : (r.error || 'Could not read it');
-    if (r.ok) loadStatus();
-  });
-  $('#quitBtn').addEventListener('click', async () => { if (!confirm('Quit bracket? The draft and the log are already saved.')) return; await api('/api/shutdown'); document.body.innerHTML = '<p style="font-family:var(--serif);font-size:28px;padding:20vh 10vw;color:#fff">bracket has quit. You can close this tab.</p>'; });
+  $('#quitBtn').addEventListener('click', async () => { if (!confirm('Quit bracket? The draft and the log are already saved.')) return; await api('/api/shutdown'); document.body.innerHTML = '<p style="font-family:var(--serif);font-size:28px;padding:20vh 10vw;color:var(--white)">bracket has quit. You can close this tab.</p>'; });
 }
 $('#settingsBtn').addEventListener('click', openSettings);
 
 // what the pasted draft will become, before the room sees it
 let seedT;
-$('#seed').addEventListener('input', () => { updateBeginLabel(); clearTimeout(seedT); seedT = setTimeout(previewSeed, 400); });
-async function previewSeed(){
-  const text = $('#seed').value; if (!text.trim()){ $('#seedInfo').textContent = ''; return; }
+$('#seed').addEventListener('input', () => { if ($('#seed').value.trim()) S.imported = null; updateBeginLabel(); clearTimeout(seedT); seedT = setTimeout(previewSeed, 400); });
+async function previewSeed(prefix){
+  const text = $('#seed').value; if (!text.trim()){ $('#seedInfo').textContent = S.imported ? $('#seedInfo').textContent : ''; return; }
+  if (typeof prefix !== 'string') prefix = '';
   const r = await api('/api/segment', { text, structured: true }).catch(() => null); if (!r) return;
   const blocks = r.sentences.filter(s => s.brk).length, heads = r.sentences.filter(s => s.kind === 'h').length, items = r.sentences.filter(s => s.kind === 'li' && s.brk).length;
-  $('#seedInfo').textContent = `${r.sentences.length} sentences in ${blocks} blocks` + (heads ? ` · ${heads} heading${heads>1?'s':''}` : '') + (items ? ` · ${items} list item${items>1?'s':''}` : '');
+  $('#seedInfo').textContent = (prefix ? prefix + ' · ' : '') + `${r.sentences.length} sentences in ${blocks} blocks` + (heads ? ` · ${heads} heading${heads>1?'s':''}` : '') + (items ? ` · ${items} list item${items>1?'s':''}` : '');
 }
 // ⌘↵ and the white button do the likely thing: start from a pasted draft, else resume the saved one, else start empty.
 // Starting empty over a saved draft is the deliberate, secondary choice.
-function primaryAction(){ return $('#seed').value.trim() ? 'seed' : (S.status && S.status.resumable ? 'resume' : 'empty'); }
+function primaryAction(){ return S.imported ? 'import' : $('#seed').value.trim() ? 'seed' : (S.status && S.status.resumable ? 'resume' : 'empty'); }
 function updateBeginLabel(){
   const n = S.status ? S.status.resumable : 0, act = primaryAction();
-  const label = { seed: 'Begin with this draft ', resume: `Resume · ${n} sentence${n===1?'':'s'} `, empty: 'Begin live session ' }[act];
+  const label = { import: 'Continue the opened session ', seed: 'Begin with this draft ', resume: `Resume · ${n} sentence${n===1?'':'s'} `, empty: 'Begin live session ' }[act];
+  $('#eyebrow').textContent = act === 'resume' ? 'Saved session found' : act === 'import' ? 'Opened session' : 'New session';
   $('#beginBtn').firstChild.textContent = label;
   $('#resumeBtn').hidden = !n;
   $('#resumeBtn').textContent = act === 'resume' ? 'Begin an empty table' : `Resume · ${n} sentence${n===1?'':'s'}`;
@@ -512,6 +587,13 @@ async function begin(how){
   const snap = await fetch('/api/snapshot').then(r=>r.json()).catch(()=>({doc:null}));
   const hadDraft = !!(snap.doc && snap.doc.sentences && snap.doc.sentences.length);
   if (how === 'resume' && hadDraft){ S.doc = snap.doc; }
+  else if (how === 'import' && S.imported){
+    if (hadDraft) log('snapshot.replaced', { doc: snap.doc });
+    S.doc = JSON.parse(JSON.stringify(S.imported.doc));
+    S.doc.sentences.forEach(x => { x.history = x.history || []; x.dissents = x.dissents || []; x.state = x.state || 'draft'; x.version = x.version || 1; });
+    if (S.imported.title && !docTitle()) $('#docTitle').textContent = S.imported.title;
+    S.imported = null;
+  }
   else {
     if (hadDraft) log('snapshot.replaced', { doc: snap.doc });
     const text = $('#seed').value;
@@ -540,20 +622,29 @@ async function endSession(){
   S.live = false; document.activeElement && document.activeElement.blur && document.activeElement.blur();
   $('#table').innerHTML = '';
   $('#setup').classList.remove('gone'); $('#seed').value = ''; $('#seedInfo').textContent = '';
-  $('#ended').textContent = `Session ended ${now()} · ${a} of ${n} agreed · record saved to Downloads`;
+  $('#ended').textContent = `Session ended ${now()} · ${a} of ${n} agreed · the statement, its record and the session are in Downloads`;
   loadStatus();
 }
 // save the statement with its record, and the event log, without typing a URL in front of the room
 async function exportRecord(){
   await new Promise(r => { clearTimeout(snapT); api('/api/snapshot', { doc: S.doc }).then(r, r); });
+  // the statement for others (Word), the statement with each sentence's history and dissents (Markdown), and the
+  // session itself with its full record (.json: opens again from the setup screen)
+  const base = `bracket-${(S.doc.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'session'}-${S.status ? S.status.session : ''}`;
   const files = [];
-  for (const [fmt, ext] of [['md','md'], ['json','json']]){
-    const text = await fetch('/api/export?fmt=' + fmt).then(r => r.text());
-    files.push({ name: `bracket-${(S.doc.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'session'}-${S.status ? S.status.session : ''}.${ext}`, text });
+  for (const [fmt, ext] of [['docx','docx'], ['md','md'], ['json','json']]){
+    const res = await fetch('/api/export?fmt=' + fmt);
+    if (fmt === 'docx'){ const buf = new Uint8Array(await res.arrayBuffer()); let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000)); files.push({ name: `${base}.${ext}`, b64: btoa(bin) }); }
+    else files.push({ name: `${base}.${ext}`, text: await res.text() });
   }
-  if (appWindow()) await window.pywebview.api.save_files(files);
-  else for (const f of files){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([f.text])); a.download = f.name; a.click(); URL.revokeObjectURL(a.href); }
-  log('export', {}); hint('Saved the statement (.md) and the event log (.json) to Downloads', true);
+  let saved = null;
+  if (appWindow()) saved = await window.pywebview.api.save_files(files);
+  else for (const f of files){
+    const blob = f.b64 ? new Blob([Uint8Array.from(atob(f.b64), c => c.charCodeAt(0))]) : new Blob([f.text]);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  log('export', { files: files.map(f => f.name) });
+  hint(`Saved to Downloads: the statement (.docx), with its history (.md), and the session (.json)${saved && saved.length ? '' : ''}`, true);
 }
 loadStatus();
 window.addEventListener('error', e => { log('client.error', { message: e.message, at: `${(e.filename || '').split('/').pop()}:${e.lineno}` }); if (S.live) hint(`Something went wrong: ${e.message}`, true); });
@@ -1077,6 +1168,7 @@ document.addEventListener('keydown', e => {
   if (!S.live){ // setup screen
     const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
     if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing){ fullscreen(); }
+    if (e.altKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyT'){ e.preventDefault(); toggleTheme(); }
     return;
   }
   const meta = e.metaKey || e.ctrlKey; const k = e.key;
@@ -1092,6 +1184,7 @@ document.addEventListener('keydown', e => {
   // Mac: Option+letter composes a character (œ ø ∂ ˙ ´), so match the physical key
   if (!meta && e.altKey && e.code === 'KeyQ'){ e.preventDefault(); flushTyping(); closeAll(false); render(); S.mode = 'confirm'; $('#confirm').classList.add('on'); return; }
   if (!meta && e.altKey && e.code === 'KeyE'){ e.preventDefault(); exportRecord(); return; }
+  if (!meta && e.altKey && e.code === 'KeyT'){ e.preventDefault(); toggleTheme(); return; }
   const p = document.activeElement?.closest?.('p.sent'); const fid = p ? p.dataset.id : S.focusId; const s = fid ? sentence(fid) : null;
 
   if (S.mode === 'dissent'){

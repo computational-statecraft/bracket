@@ -137,14 +137,50 @@ def main() -> None:
     if len(seg["sentences"]) != 3:
         fail(f"segmentation: {seg}", proc, data)
 
-    step("precedent library (bundled)")
+    step("agreed language: starts empty; a document added through the app is found")
     lib = st["library"]
     print(lib)
-    if not lib["ok"] or lib["docs"] < 10:
-        fail(f"the library is missing or small: {lib}", proc, data)
-    sent = "We reaffirm our commitment to the purposes and principles of the Charter of the United Nations."
+    if lib["ok"]:
+        fail(f"the app should ship with an empty library: {lib}", proc, data)
+    adopted = ("1. We reaffirm our commitment to the peaceful settlement of disputes in accordance with international law.\n\n"
+               "2. We will continue to strengthen cooperation on maritime safety among all members.")
+    r = ok(httpx.post(f"{BASE}/api/library/add", params={"name": "adopted.md", "body": "Forum", "title": "Smoke Declaration", "date": "2025-05-01"},
+                      content=adopted.encode(), headers=H, timeout=60))
+    print("added:", r)
+    sent = "We reaffirm our commitment to the peaceful settlement of disputes."
     hits = wait_for(lambda: ok(httpx.get(f"{BASE}/api/precedents", params={"sentence": sent}, timeout=60))["hits"], 90, "precedents", proc, data)
     print(f"{len(hits)} precedents · e.g. {hits[0]['cites'][0]['cite']}: {hits[0]['text'][:120]}")
+
+    step("import a Word draft; export the statement as Word, Markdown and a re-openable session")
+    import io
+    import zipfile
+
+    def tiny_docx() -> bytes:
+        W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        body = (f'<w:document xmlns:w="{W}"><w:body>'
+                '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Purpose</w:t></w:r></w:p>'
+                '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Aim:</w:t></w:r><w:r><w:t xml:space="preserve"> We note the progress made. We act.</w:t></w:r></w:p>'
+                '</w:body></w:document>')
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("word/document.xml", body)
+        return buf.getvalue()
+
+    imp = ok(httpx.post(f"{BASE}/api/import", params={"name": "draft.docx"}, content=tiny_docx(), headers=H, timeout=60))
+    print("imported:", imp)
+    if imp["kind"] != "text" or "## Purpose" not in imp["text"] or "**Aim:**" not in imp["text"]:
+        fail(f"Word import lost the structure: {imp}", proc, data)
+    seg = ok(httpx.post(f"{BASE}/api/segment", json={"text": imp["text"], "structured": True}, headers=H, timeout=30))
+    httpx.post(f"{BASE}/api/snapshot", json={"doc": {"title": "Smoke", "sentences": [{**x, "history": [], "dissents": []} for x in seg["sentences"]]}}, headers=H, timeout=10)
+    docx = httpx.get(f"{BASE}/api/export", params={"fmt": "docx"}, timeout=30)
+    with zipfile.ZipFile(io.BytesIO(docx.content)) as z:
+        if "We note the progress made." not in z.read("word/document.xml").decode():
+            fail("the Word export does not contain the statement", proc, data)
+    session = ok(httpx.get(f"{BASE}/api/export", params={"fmt": "json"}, timeout=30))
+    back = ok(httpx.post(f"{BASE}/api/import", params={"name": "session.json"}, content=json.dumps(session).encode(), headers=H, timeout=30))
+    if back["kind"] != "session" or len(back["doc"]["sentences"]) != len(seg["sentences"]):
+        fail(f"a saved session does not re-open: {back}", proc, data)
+    print(f"docx {len(docx.content)} bytes · session re-opens with {len(back['doc']['sentences'])} sentences")
 
     step("models already on this computer (Ollama, Apple's on-device model)")
     opts = ok(httpx.get(f"{BASE}/api/local/options", timeout=30))
