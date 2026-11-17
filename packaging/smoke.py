@@ -75,17 +75,39 @@ def wait_for(pred, timeout: float, what: str, proc, data):
     fail(f"timed out after {timeout:.0f} s waiting for {what} (last: {last})", proc, data)
 
 
+def shoot(out: Path, p) -> None:
+    """Photograph the screen once the window has loaded and styled itself (CI only looks; nothing depends on it)."""
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < 60 and p.poll() is None:
+        if "WINDOW CHECK PASSED" in (out.read_text(encoding="utf-8", errors="replace") if out.exists() else ""):
+            break
+        time.sleep(0.5)
+    time.sleep(2)
+    try:
+        from PIL import ImageGrab
+
+        shots = Path(os.environ.get("BRACKET_SHOTS", "shots"))
+        shots.mkdir(exist_ok=True)
+        ImageGrab.grab().save(shots / f"window-{sys.platform}.png")
+        print("screenshot saved", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"no screenshot ({e})", flush=True)
+
+
 def window_check(exe: str) -> None:
     """Open the real app window, let the app confirm the page loaded in it and the page→app bridge answers."""
     data = Path(tempfile.mkdtemp(prefix="bracket-window-"))
     step(f"open {exe} in its own window")
     env = {k: v for k, v in os.environ.items() if not k.startswith(("BRACKET_", "ANTHROPIC_"))}
     out = data.parent / f"{data.name}-output.txt"
+    env["BRACKET_WINDOW_HOLD"] = "8"
     try:
-        r = subprocess.run([exe, "--window-check", "30", "--port", "8797", "--data", str(data)], env=env, timeout=240,
-                           stdout=open(out, "wb"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
-        code = r.returncode
+        p = subprocess.Popen([exe, "--window-check", "30", "--port", "8797", "--data", str(data)], env=env,
+                             stdout=open(out, "wb"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        shoot(out, p)
+        code = p.wait(timeout=240)
     except subprocess.TimeoutExpired:
+        p.kill()
         code = "timeout"
     text = out.read_text(encoding="utf-8", errors="replace") if out.exists() else ""
     logs = "".join(p.read_text(encoding="utf-8", errors="replace") for p in (data / "logs").glob("*.log"))
@@ -93,6 +115,7 @@ def window_check(exe: str) -> None:
     if code != 0 or "WINDOW CHECK PASSED" not in text + logs:
         print(f"\nWINDOW CHECK FAILED (exit {code})")
         sys.exit(1)
+    print("styled:", "window styled" in text + logs)
     print("\nWINDOW CHECK PASSED")
 
 

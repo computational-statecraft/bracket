@@ -162,13 +162,13 @@
   .prec .cite{grid-column:2;margin-top:.25em;font-size:9px;color:var(--ghost)} .prec.cur .cite{color:var(--faint)}
   .prec .cite b{font-weight:400;color:var(--brass)}
   .more{margin-top:.9em;font-size:9.5px;color:var(--faint)}
-  .tiererr{font-size:9.5px;color:var(--crimson)}
+  .tiererr{font:400 13px/1.5 var(--sans);letter-spacing:0;text-transform:none;color:var(--faint)}
   .hist{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 22px;font-size:10px;color:var(--faint)}
   .hist .now{color:var(--dim)} .hist .dis{color:var(--crimson)}
   .inline-input{width:100%;background:none;border:0;border-bottom:1px solid var(--hair);outline:none;font-family:var(--serif);font-size:calc(var(--fs) * .5);color:var(--white);padding:.2em 0}
   .inline-input::placeholder{color:var(--ghost)}
   .keys{position:fixed;left:var(--gx);right:var(--gx);bottom:22px;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:40px;font-size:9.5px;letter-spacing:.16em;color:var(--ghost)}
-  #hint{transition:color 300ms var(--ease)} #hint.flash{color:var(--dim)}
+  #hint{transition:color 300ms var(--ease);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #keysRight{white-space:nowrap} #hint.flash{color:var(--dim)}
   .progress{position:fixed;left:0;bottom:0;height:2px;background:var(--brass);opacity:.7;transition:width 600ms var(--ease);z-index:6}
 
   /* end-of-session confirmation */
@@ -194,7 +194,7 @@
   .small-btn:disabled{opacity:.4;cursor:default}
   .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
   .field{background:var(--field);border:1px solid var(--hair);color:var(--white);padding:9px 12px;font:13px var(--sans);letter-spacing:.02em;border-radius:1px;outline:none;min-width:0}
-  .field:focus{border-color:var(--focus)} select.field{appearance:auto}
+  .field:focus{border-color:var(--focus)} select.field{appearance:none;-webkit-appearance:none;padding-right:38px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 15px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
   #keyIn{flex:1 1 320px}
   #settings{display:flex;flex-direction:column;gap:30px;padding-top:6px}
   #settings h3{margin:0 0 4px;font:500 11px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--brass)}
@@ -225,7 +225,7 @@
       <div class="st"><span class="k caps"><b>1</b>The draft</span>
         <div class="v">
           <textarea id="seed" spellcheck="false" placeholder="Paste the draft, or drop a file here. Headings, bold lead-ins and numbered lists are kept as structure."></textarea>
-          <div class="inline"><button class="small-btn" id="openBtn" type="button">Open a file…</button><span class="muted">Word (.docx), Markdown or text, PDF, or a saved bracket session (.json)</span></div>
+          <div class="inline"><button class="small-btn" id="openBtn" type="button">Open a file…</button><span class="muted">Word (.docx), Markdown or text, PDF, or a saved [bracket] session (.json)</span></div>
           <div id="seedInfo" class="caps" style="margin-top:12px"></div>
           <input type="file" id="fileIn" hidden accept=".docx,.md,.markdown,.txt,.pdf,.html,.htm,.json">
         </div><span></span></div>
@@ -253,7 +253,7 @@
   <div class="top-right"><span class="title caps" id="headTitle"></span><span class="caps" id="readout"></span></div>
   <div id="scroll"><div id="table"></div></div>
   <div class="fade-top"></div><div class="fade-bot"></div>
-  <div class="keys caps"><span id="hint"></span><span id="keysRight" data-kb>⌥E export · ⌥T light / dark · ⌥Q end</span></div>
+  <div class="keys caps"><span id="hint"></span><span id="keysRight" data-kb>⌥E export · ⌥T theme · ⌥Q end</span></div>
   <div class="progress" id="progress" style="width:0"></div>
 </section>
 
@@ -282,7 +282,7 @@ const REGISTERS = ['plain','institutional','formal'], LENGTHS = ['shorter','same
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const kb = t => MAC ? t : t.replace(/⌘/g, 'Ctrl+').replace(/⌥/g, 'Alt+').replace(/⇧/g, 'Shift+');
 document.querySelectorAll('[data-kb]').forEach(el => { el.textContent = kb(el.textContent); });
-const KEYS_REST = kb('double-click a word for proposals and alternatives · ⌘↵ rewrite sentence · ⌥B bracket · ⌥ hover words · ⇧↵ agree · ⌥O open · ⌥D dissent · ⌥H history · ⌥↑↓ move · ⌘Z undo');
+const KEYS_REST = kb('double-click a word for proposals · ⌘↵ rewrite sentence · ⌥B bracket · ⇧↵ agree · ⌥H history · ⌘Z undo');
 const $ = s => document.querySelector(s);
 // every write carries X-Bracket: the server refuses writes without it, so other web pages cannot drive it
 const api = (p, body, method = 'POST') => fetch(p, { method, headers:{'Content-Type':'application/json','X-Bracket':'1'}, body: body === undefined ? undefined : JSON.stringify(body) }).then(r=>r.json());
@@ -304,8 +304,8 @@ function bracketsIn(text){
   return out;
 }
 const bracketAt = (text, off) => bracketsIn(text).find(b => off >= b.start && off <= b.end);
-const KEYS_SPAN = kb('1–9 pick · A agreed language · ⇥ next · ↵ accept · ⇧↵ keep as alternative · B add alternative · ←→ weaker / stronger · ↑↓ length · R register · C Claude · esc');
-const KEYS_SENT = kb('1–9 pick · A agreed language · ⇥ next · ↵ accept · ⇧↵ keep as alternative · ←→ weaker / stronger · ↑↓ length · R register · C Claude · esc');
+const KEYS_SPAN = kb('←→ strength · ↑↓ length · R register · 1–9 pick · ↵ accept · ⇧↵ keep both · A agreed language · C Claude · esc');
+const KEYS_SENT = kb('←→ strength · ↑↓ length · R register · 1–9 pick · ↵ accept · ⇧↵ keep both · A agreed language · C Claude · esc');
 // one proposal per line, without list numbering, bullets, quotes or a reasoning model's <think> preamble (mirrors prompts.parse_lines)
 function parseLines(text, n){
   const out = [];
@@ -350,7 +350,7 @@ async function refreshLocal(test){
   if (!cur.chosen || S.choosing){ renderChooser(o); return; }
   if (cur.engine === 'builtin'){
     const st = b.engine.state;
-    if (st === 'no-model' || st === 'no-binary'){ renderChooser(o, st === 'no-binary' ? 'The built-in engine is not part of this copy of bracket: choose Ollama or Apple’s model, or use the packaged app.' : ''); return; }
+    if (st === 'no-model' || st === 'no-binary'){ renderChooser(o, st === 'no-binary' ? 'The built-in engine is not part of this copy of [bracket]: choose Ollama or Apple’s model, or use the packaged app.' : ''); return; }
     if (st === 'starting'){ setV($('#stLocal'), `Loading ${b.chosen || 'the model'}…`, 'wait', 'The first load reads the whole model from disk: from a few seconds to a minute.'); modelPoll = setTimeout(() => refreshLocal(true), 1500); return; }
   }
   if (test) checkLocal();
@@ -361,7 +361,7 @@ function renderChooser(o, note){
   const ol = o.ollama, ap = o.apple, b = o.builtin;
   ol.models.forEach(m => rows.push({ engine: 'ollama', model: m.name, label: m.name, meta: `${m.size_gb ? m.size_gb + ' GB · ' : ''}in Ollama`, tag: 'On this computer' }));
   rows.push({ engine: 'apple', model: '', label: 'Apple on-device model', meta: ap.available ? 'Apple Intelligence · built into macOS' : `Apple Intelligence · unavailable: ${ap.reason}`, tag: ap.available ? 'On this computer' : '', disabled: !ap.available, hide: S.status && S.status.platform !== 'darwin' });
-  b.models.filter(x => x.installed && !x.hidden).forEach(x => rows.push({ engine: 'builtin', model: x.id, label: x.label, meta: `${gb(x.bytes)} · downloaded by bracket`, tag: 'On this computer' }));
+  b.models.filter(x => x.installed && !x.hidden).forEach(x => rows.push({ engine: 'builtin', model: x.id, label: x.label, meta: `${gb(x.bytes)} · downloaded by [bracket]`, tag: 'On this computer' }));
   const dl = b.models.filter(x => !x.installed && !x.hidden).map(x => ({ engine: 'builtin', model: x.id, label: x.label, meta: `${gb(x.bytes)} download · ${x.note}`, tag: x.recommended ? 'Recommended download' : '', download: true, disabled: x.bytes / 1e9 + 0.2 > b.free_gb }));
   const have = rows.filter(r => !r.hide), all = [...have, ...dl];
   all.forEach(r => r.key = `${r.engine}|${r.model}`);
@@ -393,7 +393,7 @@ function renderDownload(x){
   el.innerHTML = `<div class="dlhead"><span class="dlpct">${d.state === 'verifying' ? '✓' : Math.floor(pct) + '%'}</span><span class="dlname">${d.state === 'verifying' ? 'Checking' : 'Downloading'} ${esc(x.label)}</span></div>` +
     `<div class="dl"><div class="dlbar"><i style="width:${pct.toFixed(1)}%"></i></div></div>` +
     `<small>${gb(d.done)} of ${gb(d.total)}${d.rate ? ' · ' + (d.rate / 1e6).toFixed(0) + ' MB/s' : ''}${eta}${d.error ? ' · ' + esc(d.error) : ''}</small>` +
-    `<small>Keep setting up meanwhile. If bracket closes, the download picks up where it stopped.</small>` +
+    `<small>Keep setting up meanwhile. If [bracket] closes, the download picks up where it stopped.</small>` +
     `<div class="inline"><button class="small-btn" id="dlCancel">Cancel</button></div>`;
   $('#dlCancel').addEventListener('click', async () => { await api(`/api/models/${x.id}/cancel`); setTimeout(() => refreshLocal(false), 400); });
 }
@@ -419,7 +419,7 @@ async function checkCloud(){
   if (st && !st.ok){
     if (st.error === 'no key'){
       el.className = 'v';
-      el.innerHTML = `Off · optional<small>bracket works fully offline. Add an Anthropic API key to offer Claude's proposals when the facilitator presses C; only the sentence being worked on is sent, and only then.</small><div class="inline"><input class="field" id="keyIn" type="password" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" spellcheck="false"><button class="small-btn" id="keySave">Save</button></div>`;
+      el.innerHTML = `Off · optional<small>[bracket] works fully offline. Add an Anthropic API key to offer Claude's proposals when the facilitator presses C; only the sentence being worked on is sent, and only then.</small><div class="inline"><input class="field" id="keyIn" type="password" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" spellcheck="false"><button class="small-btn" id="keySave">Save</button></div>`;
       const save = async () => { const v = $('#keyIn').value.trim(); if (!v) return; await api('/api/settings', { cloud_key: v, cloud_api: 'anthropic' }); loadStatus(); };
       $('#keySave').addEventListener('click', save); $('#keyIn').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); save(); } });
       return;
@@ -441,7 +441,7 @@ function renderLibrary(lb){
   if (S.status) S.status.library = lb;
   const head = lb.ok
     ? `${lb.docs} document${lb.docs === 1 ? '' : 's'}${lb.bodies && lb.bodies.length ? ' · ' + lb.bodies.join(', ') : ''}<small>Matching sentences are shown above the proposals, quoted exactly with their source.</small>`
-    : `None yet<small>Add texts your group has already adopted (declarations, conclusions, communiqués). When the room works on a sentence, bracket shows matching sentences from them, quoted exactly with their source, never rewritten.</small>`;
+    : `None yet<small>Add texts your group has already adopted (declarations, conclusions, communiqués). When the room works on a sentence, [bracket] shows matching sentences from them, quoted exactly with their source, never rewritten.</small>`;
   el.innerHTML = head + `<div class="inline" id="libAddRow"><button class="small-btn" id="libAddBtn" type="button">${lb.ok ? 'Add another' : 'Add a document'}</button></div>`;
   $('#libAddBtn').addEventListener('click', () => {
     $('#libAddRow').outerHTML = `<div class="inline"><input class="field" type="file" id="docFile" accept=".pdf,.docx,.html,.htm,.txt,.md"><input class="field" id="docBody" placeholder="Body, e.g. UN" size="12"><input class="field" id="docTitle2" placeholder="Title" size="26"><input class="field" id="docDate" type="date"><button class="small-btn solid" id="docAdd" type="button">Add</button></div><div class="muted" id="docNote" style="margin-top:8px">PDF, Word, web page or text. Its paragraphs are kept as written.</div>`;
@@ -470,7 +470,11 @@ function applyTheme(t){
   const dark = t === 'dark' || (t === 'system' && !matchMedia('(prefers-color-scheme: light)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   document.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('on', b.dataset.themeSet === t));
+  syncWindow();
 }
+// in the app's own window, the title bar takes the page's colour, so the window reads as one surface
+function syncWindow(){ try { if (window.pywebview && window.pywebview.api && window.pywebview.api.set_theme) window.pywebview.api.set_theme(document.documentElement.dataset.theme === 'dark'); } catch (e) {} }
+window.addEventListener('pywebviewready', syncWindow);
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (S.theme === 'system') applyTheme('system'); });
 document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => { applyTheme(b.dataset.themeSet); api('/api/settings', { theme: b.dataset.themeSet }); }));
 function toggleTheme(){ const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; applyTheme(t); api('/api/settings', { theme: t }); }
@@ -536,7 +540,7 @@ async function openSettings(){
     <label>Label under the mark</label><div>${input('org', 'e.g. your organization (optional)')}</div>
     <label>Appearance</label><div>${select('theme', [['dark','Dark (best on most projectors)'],['light','Light'],['system','Follow the computer']])}</div>
   </div></div>
-  <div class="inline"><button class="small-btn solid" id="setSave">Save settings</button><button class="small-btn" id="quitBtn">Quit bracket</button><span class="muted">Saved to <code>${esc(file)}</code>. API: <code>${location.origin}/docs</code></span></div>`;
+  <div class="inline"><button class="small-btn solid" id="setSave">Save settings</button><button class="small-btn" id="quitBtn">Quit [bracket]</button><span class="muted">Saved to <code>${esc(file)}</code>. API: <code>${location.origin}/docs</code></span></div>`;
   box.hidden = false; $('#settingsBtn').textContent = 'Close settings';
   box.querySelectorAll('[data-use]').forEach(b => b.addEventListener('click', async () => { await api(`/api/models/${b.dataset.use}/use`); refreshLocal(true); box.hidden = true; openSettings(); }));
   box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Delete this model from this computer?')) return; await api(`/api/models/${b.dataset.del}`, undefined, 'DELETE'); refreshLocal(false); box.hidden = true; openSettings(); }));
@@ -551,7 +555,7 @@ async function openSettings(){
     if (r.error){ alert(r.error); return; }
     box.hidden = true; $('#settingsBtn').textContent = 'Settings'; loadStatus();
   });
-  $('#quitBtn').addEventListener('click', async () => { if (!confirm('Quit bracket? The draft and the log are already saved.')) return; await api('/api/shutdown'); document.body.innerHTML = '<p style="font-family:var(--serif);font-size:28px;padding:20vh 10vw;color:var(--white)">bracket has quit. You can close this tab.</p>'; });
+  $('#quitBtn').addEventListener('click', async () => { if (!confirm('Quit [bracket]? The draft and the log are already saved.')) return; await api('/api/shutdown'); document.body.innerHTML = '<p style="font-family:var(--serif);font-size:28px;padding:20vh 10vw;color:var(--white)">bracket has quit. You can close this tab.</p>'; });
 }
 $('#settingsBtn').addEventListener('click', openSettings);
 
@@ -778,7 +782,7 @@ function renderExtras(s){
       (r.start == null ? `<div class="d"><span class="r caps">Whole sentence · reword only · no new claims</span></div>` : '');
     wrap.appendChild(dl);
     // a tier that failed says why, in place, instead of its cells just staying empty
-    ['local', 'cloud'].forEach(t => { if (r.err && r.err[t] && (t === 'local' || r.round > 0)){ const d = document.createElement('div'); d.className = 'tiererr caps'; d.textContent = `${t === 'local' ? 'Local' : 'Claude'} · ${r.err[t]}`; wrap.appendChild(d); } });
+    ['local', 'cloud'].forEach(t => { if (r.err && r.err[t] && (t === 'local' || r.round > 0)){ const d = document.createElement('div'); d.className = 'tiererr'; const m = String(r.err[t]); d.textContent = `${t === 'local' ? '' : 'Claude: '}${m.charAt(0).toUpperCase()}${m.slice(1)}.`; wrap.appendChild(d); } });
     const ag = renderAgreed(r); if (ag) wrap.appendChild(ag);
     wrap.appendChild(renderGrid(r));
     any = true;
