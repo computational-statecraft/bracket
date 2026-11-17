@@ -264,6 +264,7 @@
 
 <script>
 /* ---------------- state ---------------- */
+const STRENGTH_WORDS = ['weaker', 'weak', 'same', 'strong', 'stronger'];  // the strength dial, -2..2
 const S = {
   doc: { sentences: [] },        // {id,text,state,version,kind,label,brk,history:[{version,text,at,via}],dissents:[]}
   undo: [], redo: [],
@@ -771,7 +772,8 @@ function renderExtras(s){
     const r = S.rail;
     if (r.start != null){ const add = document.createElement('div'); add.className = 'addalt caps'; add.textContent = `+ Add alternative to “${r.source.length > 40 ? r.source.slice(0, 40) + '…' : r.source}” · B`; add.addEventListener('mousedown', e => { e.preventDefault(); bracketize(r.id, r.start, r.end); }); wrap.appendChild(add); }
     const dl = document.createElement('div'); dl.className = 'dials';
-    const ladder = r.ladder ? r.ladder.rungs.map((x, i) => `<span class="r caps ${i===r.ladder.current+r.dials.strength?'cur':''}">${esc(x)}</span>`).join('') : `<span class="v caps">${['weaker','same','stronger','much stronger'][r.dials.strength+1] || 'same'}</span>`;
+    // one word that changes as the dial moves, counted from the wording the rail opened on
+    const ladder = `<span class="v caps">${STRENGTH_WORDS[r.dials.strength + 2]}</span>`;
     dl.innerHTML = `<div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Strength ←→</span>${ladder}</div><div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Register</span><span class="v caps">${r.dials.register}</span></div><div class="d"><span class="caps" style="font-size:10.5px;color:var(--brass)">Length ↑↓</span><span class="v caps">${r.dials.length}</span></div>` +
       (r.start == null ? `<div class="d"><span class="r caps">Whole sentence · reword only · no new claims</span></div>` : '');
     wrap.appendChild(dl);
@@ -1037,7 +1039,12 @@ function doQueryRail(){
   compose(r); render();
 }
 // the rung the strength dial points at, so the models aim at a named force rather than "much stronger"
-function railTarget(r){ return r.ladder && r.dials.strength ? (r.ladder.rungs[r.ladder.current + r.dials.strength] || null) : null; }
+// (the ladder stays out of sight: the dial shows weaker…stronger, and the rung only steers the models)
+function railTarget(r){
+  if (!r.ladder || !r.dials.strength) return null;
+  const i = Math.max(0, Math.min(r.ladder.rungs.length - 1, r.ladder.current + r.dials.strength));
+  return i === r.ladder.current ? null : r.ladder.rungs[i];
+}
 // C: six from Claude under the local three (at once, if prefetched); C again (and after): nine fresh from Claude
 function moreFromClaude(){
   const r = S.rail; r.round += 1;
@@ -1227,7 +1234,7 @@ document.addEventListener('keydown', e => {
     if (k === 'Enter' && !meta){ e.preventDefault(); acceptRail(); return; }
     if (e.code === 'KeyB' && !meta && r.start != null){ e.preventDefault(); bracketize(r.id, r.start, r.end); return; }
     if (k === 'Escape'){ e.preventDefault(); const id = r.id; closeAll(); render(); getSelection().removeAllRanges(); centre(id); return; }
-    if (k === 'ArrowLeft' || k === 'ArrowRight'){ e.preventDefault(); const max = r.ladder ? r.ladder.rungs.length - 1 - r.ladder.current : 2; const min = r.ladder ? -r.ladder.current : -1; r.dials.strength = Math.max(min, Math.min(max, r.dials.strength + (k === 'ArrowRight' ? 1 : -1))); render(); queryRail(); return; }
+    if (k === 'ArrowLeft' || k === 'ArrowRight'){ e.preventDefault(); const next = Math.max(-2, Math.min(2, r.dials.strength + (k === 'ArrowRight' ? 1 : -1))); if (next === r.dials.strength) return; r.dials.strength = next; render(); queryRail(); return; }
     if (k === 'ArrowUp' || k === 'ArrowDown'){ e.preventDefault(); const i = LENGTHS.indexOf(r.dials.length); r.dials.length = LENGTHS[Math.max(0, Math.min(2, i + (k === 'ArrowUp' ? 1 : -1)))]; render(); queryRail(); return; }
     if (k.toLowerCase() === 'r' && !meta){ e.preventDefault(); r.dials.register = REGISTERS[(REGISTERS.indexOf(r.dials.register) + 1) % 3]; render(); queryRail(); return; }
     if (e.code === 'KeyC' && !meta){ e.preventDefault(); moreFromClaude(); return; }
