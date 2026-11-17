@@ -32,7 +32,8 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
-  LLAMA_CPP_TAG: b12137          # the llama.cpp release bundled with the app (github.com/ggml-org/llama.cpp/releases)
+  LLAMA_CPP_TAG: b12137          # the llama.cpp release bundled with the app (github.com/ggml-org/llama.cpp/releases);
+                                 # changing it means updating each llama_sha256 below
   PYTHON_VERSION: "3.12"
   UV_PYTHON_PREFERENCE: only-system
 
@@ -45,10 +46,10 @@ jobs:
         os: ${{ fromJSON((github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
       - run: uv sync --locked
       - run: uv run pytest -q
 
@@ -59,16 +60,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, name: macOS-arm64, llama: macos-arm64.tar.gz }
-          - { os: windows-latest, name: Windows-x64, llama: win-cpu-x64.zip }
+          # llama_sha256: the release file's checksum, so a replaced download stops the build
+          - { os: macos-latest, name: macOS-arm64, llama: macos-arm64.tar.gz, llama_sha256: 65fc3b01ce7def2177982759b0af8c67221986114ef4c0a56e1e6b9218fa2185 }
+          - { os: windows-latest, name: Windows-x64, llama: win-cpu-x64.zip, llama_sha256: 20019b4103c0da8d1b7b65c4a1e542eba4e081ff2d584a7b8ab4723afc835b8d }
     runs-on: ${{ matrix.os }}
     defaults:
       run: { shell: bash }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
       - run: uv sync --locked --group build
       - name: Bundle WordNet
         run: uv run python -c "import nltk; nltk.download('wordnet', download_dir='build/nltk_data', raise_on_error=True)"
@@ -78,6 +80,8 @@ jobs:
           mkdir -p build/llama-src build/llama
           asset="llama-$LLAMA_CPP_TAG-bin-${{ matrix.llama }}"
           gh release download "$LLAMA_CPP_TAG" -R ggml-org/llama.cpp -p "$asset" -D build
+          got=$(python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "build/$asset")
+          test "$got" = "${{ matrix.llama_sha256 }}" || { echo "::error::$asset checksum $got does not match the pinned one"; exit 1; }
           case "$asset" in *.zip) unzip -q "build/$asset" -d build/llama-src ;; *) tar -xzf "build/$asset" -C build/llama-src ;; esac
           srv=$(find build/llama-src -type f \( -name llama-server -o -name llama-server.exe \) | head -1)
           test -n "$srv" || { echo "llama-server not found in $asset"; find build/llama-src | head -50; exit 1; }
@@ -110,7 +114,7 @@ jobs:
             *)       exe=dist/bracket/bracket.exe ;;
           esac
           uv run --no-sync --with pillow python packaging/smoke.py "$exe" --window
-      - uses: actions/upload-artifact@v4   # a photograph of the window, to check how it looks (a few hundred KB)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4 · a photograph of the window, to check how it looks (a few hundred KB)
         if: runner.os != 'Linux' && always()
         continue-on-error: true            # a look, not a test: a full storage quota must not fail the build
         with:
@@ -138,7 +142,7 @@ jobs:
               tar -C dist -czf "out/bracket-${{ matrix.name }}.tar.gz" bracket ;;
           esac
           ls -la out
-      - uses: actions/upload-artifact@v4   # ~0.5 GB for the three apps: kept briefly, and only when wanted
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4 · ~0.3 GB for the two apps: kept briefly, and only when wanted
         if: inputs.keep_apps || startsWith(github.ref, 'refs/tags/')
         with:
           name: "bracket-${{ matrix.name }}"
@@ -152,9 +156,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with: { path: out, pattern: "bracket-*", merge-multiple: true }
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           files: out/*
           generate_release_notes: true

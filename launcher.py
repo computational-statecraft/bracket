@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 import webbrowser
+from pathlib import Path
 
 
 def _quiet_streams() -> None:
@@ -192,35 +193,52 @@ class _Bridge:
 
     def save_files(self, files):
         """[{name, text} or {name, b64}] → saved in the Downloads folder (a browser download does not exist in a
-        native window). Returns the paths written."""
-        import base64
-        from pathlib import Path
-
+        native window). Returns the paths written. Only the app's own export types, plain names and modest sizes:
+        whatever runs in the page can never use this to drop a script or an app into the folder."""
         try:
             from platformdirs import user_downloads_dir
 
             folder = Path(user_downloads_dir())
         except Exception:  # noqa: BLE001
             folder = Path.home() / "Downloads"
-        folder.mkdir(parents=True, exist_ok=True)
-        saved = []
-        for f in files:
-            name = "".join(c for c in str(f["name"]) if c.isalnum() or c in "-_. ") or "bracket-export.txt"
-            path = folder / name
-            stem, n = path.stem, 1
-            while path.exists():
-                n += 1
-                path = folder / f"{stem}-{n}{path.suffix}"
-            if f.get("b64") is not None:
-                path.write_bytes(base64.b64decode(f["b64"]))
-            else:
-                path.write_text(str(f.get("text", "")), encoding="utf-8")
-            saved.append(str(path))
-        return saved
+        return _save_exports(folder, files)
 
-    def open_in_browser(self, url):
-        webbrowser.open(url)
-        return True
+
+SAVE_TYPES = {".docx", ".md", ".json", ".txt", ".csv"}
+SAVE_MAX_BYTES = 50 * 1024 * 1024
+
+
+def _safe_export_name(raw) -> str | None:
+    """A plain file name with one of the export suffixes, or None. No folders, no hidden files, no other types."""
+    name = "".join(c for c in str(raw) if c.isascii() and (c.isalnum() or c in "-_. ")).strip(" .")[:120]
+    stem, dot, ext = name.rpartition(".")
+    if not dot or not stem or f".{ext.lower()}" not in SAVE_TYPES:
+        return None
+    return name
+
+
+def _save_exports(folder: Path, files) -> list[str]:
+    import base64
+
+    folder.mkdir(parents=True, exist_ok=True)
+    saved = []
+    for f in list(files or [])[:10]:
+        if not isinstance(f, dict):
+            continue
+        name = _safe_export_name(f.get("name", ""))
+        if not name:
+            continue
+        data = base64.b64decode(f["b64"]) if f.get("b64") is not None else str(f.get("text", "")).encode("utf-8")
+        if len(data) > SAVE_MAX_BYTES:
+            continue
+        path = folder / name
+        stem, n = path.stem, 1
+        while path.exists():
+            n += 1
+            path = folder / f"{stem}-{n}{path.suffix}"
+        path.write_bytes(data)
+        saved.append(str(path))
+    return saved
 
 
 DARK_BG, LIGHT_BG = "#0a0a0b", "#ffffff"

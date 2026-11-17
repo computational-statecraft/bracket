@@ -123,13 +123,23 @@ def docx_text(data: bytes) -> str:
     return docx_parts(data)[1]
 
 
+DOCX_PART_MAX = 32 * 1024 * 1024   # unpacked size of one part: a real statement is a few hundred KB
+
+
+def _part(z: zipfile.ZipFile, name: str) -> bytes:
+    """One part of a Word file, refusing a part that unpacks to an absurd size (a "zip bomb")."""
+    if z.getinfo(name).file_size > DOCX_PART_MAX:
+        raise ValueError(f"{name} is too large to be a statement")
+    return z.read(name)
+
+
 def docx_parts(data: bytes) -> tuple[str, str]:
     """(title, text) of a Word document. The first paragraph in Word's Title style is the title; the text has
     headings as "## ", numbered and bulleted paragraphs as "1. " and "- ", and a bold opening phrase ending in a
     colon as a lead-in ("**Purpose:** ...")."""
     title = ""
     with zipfile.ZipFile(io.BytesIO(data)) as z:
-        root = ET.fromstring(z.read("word/document.xml"))
+        root = ET.fromstring(_part(z, "word/document.xml"))
         numfmt = _numbering_formats(z)
     lines: list[str] = []
     counters: dict[tuple[str, str], int] = {}
@@ -183,7 +193,7 @@ def docx_parts(data: bytes) -> tuple[str, str]:
 def _numbering_formats(z: zipfile.ZipFile) -> dict[tuple[str, str], str]:
     """(numId, level) → number format ("bullet", "decimal", ...), from word/numbering.xml if there is one."""
     try:
-        root = ET.fromstring(z.read("word/numbering.xml"))
+        root = ET.fromstring(_part(z, "word/numbering.xml"))
     except KeyError:
         return {}
     abstract: dict[str, dict[str, str]] = {}
@@ -202,6 +212,44 @@ def _numbering_formats(z: zipfile.ZipFile) -> dict[tuple[str, str], str]:
     return out
 
 
+def _int(v, default: int = 1) -> int:
+    try:
+        return max(0, min(int(v), 10_000))
+    except (TypeError, ValueError):
+        return default
+
+
+def _str(v, limit: int = 20_000) -> str:
+    return (v if isinstance(v, str) else "" if v is None else str(v))[:limit]
+
+
+def clean_session(doc: dict) -> dict:
+    """A saved session is a file anyone could have written: keep only the fields the app uses, each with the type it
+    expects (numbers as numbers, states and kinds from the known sets, ids as plain tokens), so nothing in the file
+    can reach the page as markup or break it."""
+    out = {"title": _str(doc.get("title"), 300), "sentences": []}
+    seen = set()
+    for i, s in enumerate(doc.get("sentences") or []):
+        if not isinstance(s, dict):
+            continue
+        sid = re.sub(r"[^A-Za-z0-9_-]", "", _str(s.get("id"), 40)) or f"s{i + 1}"
+        while sid in seen:
+            sid += "x"
+        seen.add(sid)
+        hist = [{"version": _int(h.get("version")), "at": _str(h.get("at"), 40), "via": _str(h.get("via"), 40),
+                 "text": _str(h.get("text"))} for h in (s.get("history") or []) if isinstance(h, dict)][:500]
+        dis = [{"version": _int(d.get("version")), "who": _str(d.get("who"), 200), "note": _str(d.get("note"), 2000)}
+               for d in (s.get("dissents") or []) if isinstance(d, dict)][:200]
+        out["sentences"].append({
+            "id": sid, "text": _str(s.get("text")), "label": _str(s.get("label"), 200) or None,
+            "kind": s.get("kind") if s.get("kind") in ("p", "h", "li") else "p",
+            "brk": bool(s.get("brk", True)),
+            "state": s.get("state") if s.get("state") in ("draft", "open", "agreed") else "draft",
+            "version": _int(s.get("version")), "history": hist, "dissents": dis,
+        })
+    return out
+
+
 def import_file(name: str, data: bytes) -> dict:
     """{'ok', 'kind': 'text'|'session', 'text'|'doc', 'title', 'detail'} for a file someone opened."""
     lower = name.lower()
@@ -213,12 +261,13 @@ def import_file(name: str, data: bytes) -> dict:
         doc = j.get("doc") if isinstance(j, dict) else None
         if j.get("format") != SESSION_FORMAT or not isinstance(doc, dict) or not isinstance(doc.get("sentences"), list):
             return {"ok": False, "error": "this .json file is not a saved bracket session"}
+        doc = clean_session(doc)
         return {"ok": True, "kind": "session", "doc": doc, "title": doc.get("title") or j.get("title") or "",
                 "detail": f"saved session · {len(doc['sentences'])} sentences"}
     if lower.endswith(".docx") or data[:2] == b"PK":
         try:
             title, text = docx_parts(data)
-        except (zipfile.BadZipFile, KeyError, ET.ParseError):
+        except (zipfile.BadZipFile, KeyError, ET.ParseError, ValueError):
             return {"ok": False, "error": "this file could not be read as a Word document (.docx)"}
         return {"ok": True, "kind": "text", "text": text, "title": title or _stem(name), "detail": "Word document"}
     if lower.endswith(".doc"):
