@@ -139,15 +139,23 @@
   <div class="wrap">
     <div class="tablewrap">
       <table>
-        <caption class="small" style="text-align:left;caption-side:bottom;padding-top:12px">Related systems, as described in their own publications. Agreement tools built for large groups solve a different problem: aggregating the views of many people.</caption>
-        <thead><tr><th>System</th><th>Who writes the text</th><th>Disagreement kept in the text</th><th>Precedent quoted word for word</th><th>Wording-strength control</th><th>Runs on one computer</th></tr></thead>
+        <caption class="small" style="text-align:left;caption-side:bottom;padding-top:12px">Related systems.</caption>
+        <thead><tr><th scope="col">System</th><th scope="col">Built for</th><th scope="col">Group</th><th scope="col">What the model does</th><th scope="col">Where it runs</th></tr></thead>
         <tbody>
-          <tr><td>Habermas Machine <span class="small">Google DeepMind</span></td><td>The model drafts group statements; people rank them</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
-          <tr><td>CICERO <span class="small">Meta</span></td><td>The model negotiates in its own words (in the game <em>Diplomacy</em>)</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
-          <tr><td>Facilitator in Teams <span class="small">Microsoft</span></td><td>The model takes notes and summaries for the meeting</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
-          <tr><td>Polis <span class="small">open source</span></td><td>Participants write; an algorithm groups and selects</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
-          <tr><td>Upwelling, Patchwork <span class="small">Ink &amp; Switch</span></td><td>People write; machine edits arrive as reviewable changes</td><td><span class="n">as branches</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="y">yes</span></td></tr>
-          <tr class="us"><td>[bracket]</td><td>People write; a model only rewords, under a rule enforced in code</td><td><span class="y">yes, and it blocks agreement</span></td><td><span class="y">yes, from documents you add</span></td><td><span class="y">yes, verb ladders</span></td><td><span class="y">yes</span></td></tr>
+          <tr class="grp"><th colspan="5" scope="rowgroup">Writing assistants</th></tr>
+          <tr><td>Copilot in Word <span class="small">Microsoft</span></td><td>Drafting and editing documents</td><td>One writer, or a shared file</td><td>Drafts, rewrites or summarizes selected text; tone and length options</td><td>Cloud</td></tr>
+          <tr><td>Gemini in Google Docs <span class="small">Google</span></td><td>Drafting and editing documents</td><td>One writer, or a shared file</td><td>Drafts and refines text; shorten, elaborate, change tone</td><td>Cloud</td></tr>
+          <tr class="grp"><th colspan="5" scope="rowgroup">Collaborative writing</th></tr>
+          <tr><td>Upwelling, Patchwork <span class="small">Ink &amp; Switch</span></td><td>Versioned writing for teams</td><td>Small teams</td><td>Patchwork explores AI edits as reviewable changes</td><td>On your computer · research prototypes</td></tr>
+          <tr class="grp"><th colspan="5" scope="rowgroup">Deliberation at scale</th></tr>
+          <tr><td>Polis <span class="small">Computational Democracy Project</span></td><td>Mapping opinion across a large public</td><td>Hundreds to many thousands</td><td>Groups participants by how they vote on short statements</td><td>Hosted or self-hosted · open source</td></tr>
+          <tr><td>Talk to the City <span class="small">AI Objectives Institute</span></td><td>Summarizing large consultations</td><td>Hundreds to thousands</td><td>Clusters and summarizes what people said</td><td>Cloud models · open source</td></tr>
+          <tr class="grp"><th colspan="5" scope="rowgroup">Mediation and negotiation research</th></tr>
+          <tr><td>Habermas Machine <span class="small">Google DeepMind</span></td><td>Helping small groups find common ground</td><td>Small groups</td><td>Drafts group statements from individual views; people critique and rank them</td><td>Research system</td></tr>
+          <tr><td>CICERO <span class="small">Meta</span></td><td>Studying negotiation in the game <em>Diplomacy</em></td><td>Seven players</td><td>Plays as a party, negotiating in its own words</td><td>Research code</td></tr>
+          <tr class="grp"><th colspan="5" scope="rowgroup">Meetings</th></tr>
+          <tr><td>Facilitator in Teams <span class="small">Microsoft</span></td><td>Running meetings</td><td>A meeting</td><td>Keeps notes, tracks the agenda, summarizes</td><td>Cloud</td></tr>
+          <tr class="us"><td>[bracket]</td><td>Drafting a shared statement live</td><td>A room of negotiators</td><td>Proposes alternative wording on request, by strength, length and tone; people choose</td><td>On your computer, optional cloud · open source</td></tr>
         </tbody>
       </table>
     </div>
@@ -165,6 +173,7 @@
       <li>Meta FAIR Diplomacy Team et al. (2022). Human-level play in the game of <em>Diplomacy</em> by combining language models with strategic reasoning. <em>Science</em> 378.</li>
       <li>Lee, M., Liang, P. &amp; Yang, Q. (2022). CoAuthor: designing a human–AI collaborative writing dataset. <em>CHI 2022</em>.</li>
       <li>Ink &amp; Switch (2023, 2024). Upwelling; Patchwork. Lab notebooks.</li>
+      <li>Small, C., Bjorkegren, M., Erkkilä, T., Shaw, L. &amp; Megill, C. (2021). Polis: scaling deliberation by mapping high-dimensional opinion spaces. <em>Recerca</em> 26(2).</li>
     </ul>
   </div>
 </section>
