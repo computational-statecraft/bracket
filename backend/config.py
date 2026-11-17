@@ -49,8 +49,9 @@ os.environ.setdefault("NLTK_DATA", os.pathsep.join(str(p) for p in NLTK_DIRS))
 # ---------- the settings themselves ----------
 # name: (environment variables, in order of preference; default)
 SPEC: dict[str, tuple[tuple[str, ...], object]] = {
-    # local tier: "builtin" runs llama.cpp inside the app; "ollama" and "openai" talk to a server you run yourself
-    "local_engine": (("BRACKET_LOCAL_ENGINE",), "builtin"),
+    # local tier: "builtin" runs llama.cpp inside the app; "ollama" and "openai" talk to a server you run yourself;
+    # "apple" is Apple's on-device model (Apple Intelligence). Unset until the user chooses on the setup screen.
+    "local_engine": (("BRACKET_LOCAL_ENGINE",), ""),
     "local_model": (("BRACKET_LOCAL_MODEL",), ""),            # a catalog id (builtin) or the server's model name
     "local_model_path": (("BRACKET_LOCAL_MODEL_PATH",), ""),  # builtin only: any GGUF file on disk
     "local_url": (("BRACKET_LOCAL_URL", "OLLAMA_URL"), ""),   # ollama/openai: the server's address
@@ -147,7 +148,10 @@ def public() -> dict:
 
 def reload() -> None:
     g = globals()
-    g["LOCAL_ENGINE"] = value("local_engine").lower()
+    eng = value("local_engine").lower()
+    if not eng and (value("local_model_path") or any(MODELS_DIR.glob("*.gguf"))):
+        eng = "builtin"   # a model downloaded before choosing was a thing (or by hand): keep using it
+    g["LOCAL_ENGINE"] = eng
     g["LOCAL_MODEL"] = value("local_model")
     g["LOCAL_MODEL_PATH"] = value("local_model_path")
     url = value("local_url")

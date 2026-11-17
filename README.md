@@ -21,7 +21,7 @@ No terminal, no Python, no separate installs.
 
 | Computer | File |
 |---|---|
-| Mac with Apple silicon (M1 or later) | `bracket-macOS-arm64.dmg` (about 135 MB) |
+| Mac with Apple silicon (M1 or later) | `bracket-macOS-arm64.dmg` (about 175 MB) |
 | Windows 10 or 11 (64-bit) | `bracket-Windows-x64.zip` (about 150 MB) |
 | Linux (x86-64, glibc 2.35 or later, e.g. Ubuntu 22.04+) | `bracket-Linux-x64.tar.gz` (about 210 MB) |
 
@@ -35,12 +35,19 @@ No terminal, no Python, no separate installs.
   **bracket.exe**. If SmartScreen says "Windows protected your PC", click **More info → Run anyway**. You do this once.
 - **Linux:** extract the archive and run `bracket/bracket`.
 
-bracket opens in your web browser at `http://127.0.0.1:8765`. A small window shows that it is running; closing that
-window (or **Quit** in Settings) stops it.
+bracket opens in its own window (on Linux, in your web browser). Closing the window, or **Quit** in Settings, stops
+it. Press **F** on the setup screen, or ⌘⇧F / Ctrl+Shift+F while drafting, for full screen on the projector.
 
-**3. Choose a model and click Download.** The setup screen recommends a model for your computer's memory. It downloads
-once from Hugging Face (no account needed) and then runs offline. While it downloads you can name the session and
-paste your draft. When the **Local model** row says *Ready*, press **Begin**.
+**3. Choose the local model.** The setup screen first lists what is already on your computer:
+
+- the models in **Ollama**, if you use it and it is running;
+- **Apple's on-device model** (Apple Intelligence), on a Mac with macOS 26 or later and Apple Intelligence turned on.
+  If it is unavailable, the screen says why;
+- models bracket has already downloaded.
+
+Pick one and press **Use**. If you have none, choose a download: the screen recommends one for your computer's memory.
+It downloads once from Hugging Face (no account needed) and then runs offline; meanwhile you can name the session and
+paste your draft. When the **Local model** row says *Ready*, press **Begin**. **Change model** switches later.
 
 That's it. To use Claude as well, paste an Anthropic API key into the **Claude** row (see [Claude](#claude-optional)).
 
@@ -173,7 +180,7 @@ then the default. A setting fixed by an environment variable shows as locked in 
 
 | Setting | Environment variable | Default |
 |---|---|---|
-| Local engine: `builtin`, `ollama`, `openai` (any OpenAI-compatible server), `off` | `BRACKET_LOCAL_ENGINE` | `builtin` |
+| Local engine: `builtin`, `ollama`, `apple`, `openai` (any OpenAI-compatible server), `off` | `BRACKET_LOCAL_ENGINE` | chosen on the setup screen |
 | Local model (catalog id for `builtin`; the server's model name otherwise) | `BRACKET_LOCAL_MODEL` | the recommended download |
 | Your own GGUF file for `builtin` | `BRACKET_LOCAL_MODEL_PATH` | |
 | Local server address (`ollama` / `openai`) | `BRACKET_LOCAL_URL` | `http://127.0.0.1:11434` for Ollama |
@@ -191,8 +198,8 @@ server-sent events), precedents, the log and exports. See [`docs/API.md`](docs/A
 `http://127.0.0.1:8765/docs` while bracket runs.
 
 **Command line** (the packaged app's executable, or `uv run python launcher.py` from source):
-`--headless` (serve without window or browser), `--port N`, `--data DIR`, `--no-browser`, `--doctor` (check every tier
-with real calls), `--version`.
+`--headless` (serve without window or browser), `--browser` (use the browser instead of the app window), `--port N`,
+`--data DIR`, `--doctor` (check every tier with real calls), `--version`.
 
 **Editable parts.** The strength ladders are a plain list in `backend/lexicon.py` (`LADDERS`); the model catalog is
 `backend/models.py`; the prompt is `backend/prompts.py`; the guard is `backend/validate.py`; the library sources are
@@ -228,10 +235,13 @@ start. The precedent library can be downloaded from the setup screen.
 | the library from the command line | `uv run python -m backend.library_cli fetch \| add \| list \| search` |
 | build the app | `uv sync --group build && uv run pyinstaller packaging/bracket.spec` |
 
-**Releases** are built by `.github/workflows/build.yml` on every push: tests on macOS, Windows and Linux; the library
-fetched; the app built for each platform with llama.cpp bundled; and each build smoke-tested as a new user would meet
-it (an empty data folder, a model downloaded through the app, real proposals from the built-in engine). Pushing a tag
-`v*` publishes the builds as a GitHub Release.
+**Releases** are built by `.github/workflows/build.yml`. A push to a working branch runs the unit tests on Linux only.
+A push to `main`, a pull request, a tag or a manual run (**Actions → build → Run workflow**) runs everything: tests on
+macOS, Windows and Linux; the library fetched; the app built for each platform with llama.cpp bundled; and each build
+smoke-tested as a new user would meet it (an empty data folder, a model downloaded through the app, real proposals from
+the built-in engine, the app's own window). A manual run keeps the three apps for 3 days, for trying them out; pushing a
+tag `v*` publishes them as a GitHub Release. The limits are there because private repositories have a small allowance
+of Actions minutes and storage (the three apps are about 0.5 GB per run).
 
 ```
 backend/    app.py (HTTP API) · config.py (settings) · engine.py (llama.cpp) · models.py (catalog, downloads)
@@ -342,6 +352,9 @@ maintainers; verify them before citing.
 - **No GPU on Windows and Linux.** The bundled engine there is llama.cpp's CPU build, which works everywhere but is
   slower; on those machines prefer E2B or E4B. Macs use the GPU (Metal). For a GPU elsewhere, run Ollama or LM Studio
   and choose it in Settings.
+- **Apple's on-device model** is untested in real use: it needs Apple Intelligence hardware, which automated builds lack.
+  Apple's content filter, even in its rewriting mode, may decline some security or diplomatic wording; the room then
+  sees that it declined, and another model can be chosen.
 - **Model downloads are large** (3–17 GB) and need disk space and a decent connection. They resume if interrupted.
   Networks that block Hugging Face will need the model copied in by hand (Settings → *Your own GGUF file*).
 - **Speed has not been benchmarked across machines.** The model recommendations are memory-based rules of thumb.

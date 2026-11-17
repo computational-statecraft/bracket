@@ -18,6 +18,8 @@ dependencies = [
     "lemminflect>=0.2.3,<0.3",
     "pydantic>=2.7,<3",
     "platformdirs>=4,<5",
+    # the app's own window: the system WebKit view on macOS, Edge WebView2 on Windows (Linux uses the browser)
+    "pywebview>=6.2,<7; sys_platform == 'darwin' or sys_platform == 'win32'",
     "pypdf>=5,<7",
 ]
 

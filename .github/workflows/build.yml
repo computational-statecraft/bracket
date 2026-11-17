@@ -1,6 +1,14 @@
 # Tests, builds the desktop app for macOS, Windows and Linux, and checks each build the way a new user would meet it:
 # an empty data folder, a model downloaded through the app, real proposals from the built-in engine.
 # Pushing a tag v* publishes the builds as a GitHub Release.
+#
+# Kept cheap, because private repositories have a small allowance of Actions minutes (macOS minutes count several
+# times over) and of artifact storage:
+#   - a push to a working branch: unit tests on Linux only;
+#   - a push to main, a pull request, a tag or a manual run (Actions → build → Run workflow): tests on all three
+#     platforms, then the full build and smoke tests;
+#   - finished apps are stored only for a manual run (3 days) or a tag (1 day: the release job copies them to the
+#     Release, whose files do not count against Actions storage). A newer push to the same branch cancels a run.
 name: build
 
 on:
@@ -13,6 +21,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 env:
   LLAMA_CPP_TAG: b12137          # the llama.cpp release bundled with the app (github.com/ggml-org/llama.cpp/releases)
   PYTHON_VERSION: "3.12"
@@ -23,7 +35,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # all three platforms for a full run; Linux alone for a push to a working branch
+        os: ${{ fromJSON((github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +47,7 @@ jobs:
       - run: uv run pytest -q
 
   library:
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,9 +64,10 @@ jobs:
           grep -E "FAILED|EMPTY" fetch.log | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
           test "$n" -ge 20   # a build with a thin library is a broken build
       - uses: actions/upload-artifact@v4
-        with: { name: library-texts, path: library/texts/*.json }
+        with: { name: library-texts, path: library/texts/*.json, retention-days: 1 }   # only passed to the build jobs
 
   build:
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     needs: [test, library]
     strategy:
       fail-fast: false
@@ -86,10 +101,16 @@ jobs:
           cp -a "$(dirname "$srv")"/. build/llama/
           ls -la build/llama | head -40
           "build/llama/$(basename "$srv")" --version
+      - name: Apple's on-device model SDK (macOS; compiles Swift, needs the macOS 26 SDK)
+        if: runner.os == 'macOS'
+        run: |
+          sw_vers; xcrun --sdk macosx --show-sdk-version || true
+          uv pip install "apple-fm-sdk==0.2.1" && uv run --no-sync python -c "import apple_fm_sdk, sys; print('apple-fm-sdk', apple_fm_sdk.__file__)" \
+            || echo "::warning::apple-fm-sdk could not be built on this runner; the build will not offer Apple's on-device model"
       - name: Icon
-        run: uv run --with pillow python packaging/make_icon.py
+        run: uv run --no-sync --with pillow python packaging/make_icon.py
       - name: Build the app
-        run: uv run pyinstaller packaging/bracket.spec --noconfirm --distpath dist --workpath build/work
+        run: uv run --no-sync pyinstaller packaging/bracket.spec --noconfirm --distpath dist --workpath build/work
       - name: Smoke test the built app (empty data folder, real model download, real proposals)
         run: |
           case "${{ runner.os }}" in
@@ -97,8 +118,17 @@ jobs:
             Windows) exe=dist/bracket/bracket.exe ;;
             *)       exe=dist/bracket/bracket ;;
           esac
-          uv run python packaging/smoke.py "$exe"
+          uv run --no-sync python packaging/smoke.py "$exe"
+      - name: Check the app's own window (macOS, Windows)
+        if: runner.os != 'Linux'
+        run: |
+          case "${{ runner.os }}" in
+            macOS)   exe=dist/bracket.app/Contents/MacOS/bracket ;;
+            *)       exe=dist/bracket/bracket.exe ;;
+          esac
+          uv run --no-sync python packaging/smoke.py "$exe" --window
       - name: Package
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
@@ -111,8 +141,12 @@ jobs:
               tar -C dist -czf "out/bracket-${{ matrix.name }}.tar.gz" bracket ;;
           esac
           ls -la out
-      - uses: actions/upload-artifact@v4
-        with: { name: "bracket-${{ matrix.name }}", path: out/* }
+      - uses: actions/upload-artifact@v4   # ~0.5 GB for the three apps: kept briefly, and only when wanted
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        with:
+          name: "bracket-${{ matrix.name }}"
+          path: out/*
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 1 || 3 }}
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

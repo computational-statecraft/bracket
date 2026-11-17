@@ -75,6 +75,27 @@ def wait_for(pred, timeout: float, what: str, proc, data):
     fail(f"timed out after {timeout:.0f} s waiting for {what} (last: {last})", proc, data)
 
 
+def window_check(exe: str) -> None:
+    """Open the real app window, let the app confirm the page loaded in it and the page→app bridge answers."""
+    data = Path(tempfile.mkdtemp(prefix="bracket-window-"))
+    step(f"open {exe} in its own window")
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("BRACKET_", "ANTHROPIC_"))}
+    out = data.parent / f"{data.name}-output.txt"
+    try:
+        r = subprocess.run([exe, "--window-check", "30", "--port", "8797", "--data", str(data)], env=env, timeout=240,
+                           stdout=open(out, "wb"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        code = r.returncode
+    except subprocess.TimeoutExpired:
+        code = "timeout"
+    text = out.read_text(encoding="utf-8", errors="replace") if out.exists() else ""
+    logs = "".join(p.read_text(encoding="utf-8", errors="replace") for p in (data / "logs").glob("*.log"))
+    print(text[-3000:], logs[-3000:], sep="\n")
+    if code != 0 or "WINDOW CHECK PASSED" not in text + logs:
+        print(f"\nWINDOW CHECK FAILED (exit {code})")
+        sys.exit(1)
+    print("\nWINDOW CHECK PASSED")
+
+
 def main() -> None:
     for stream in (sys.stdout, sys.stderr):   # a Windows console's code page cannot print every character
         stream.reconfigure(encoding="utf-8", errors="replace")
@@ -82,7 +103,10 @@ def main() -> None:
     ap.add_argument("exe")
     ap.add_argument("--model", default="qwen2.5-0.5b")
     ap.add_argument("--no-model", action="store_true")
+    ap.add_argument("--window", action="store_true", help="only check the app's own window opens the page")
     a = ap.parse_args()
+    if a.window:
+        return window_check(a.exe)
 
     data = Path(tempfile.mkdtemp(prefix="bracket-smoke-"))
     global OUT
@@ -122,6 +146,12 @@ def main() -> None:
     hits = wait_for(lambda: ok(httpx.get(f"{BASE}/api/precedents", params={"sentence": sent}, timeout=60))["hits"], 90, "precedents", proc, data)
     print(f"{len(hits)} precedents · e.g. {hits[0]['cites'][0]['cite']}: {hits[0]['text'][:120]}")
 
+    step("models already on this computer (Ollama, Apple's on-device model)")
+    opts = ok(httpx.get(f"{BASE}/api/local/options", timeout=30))
+    print("ollama:", {k: opts["ollama"][k] for k in ("running", "url")}, "· apple:", opts["apple"], "· recommended:", opts["recommended"])
+    if opts["current"]["chosen"]:
+        fail(f"a fresh install should not have a model chosen yet: {opts['current']}", proc, data)
+
     step("built-in engine present")
     m = ok(httpx.get(f"{BASE}/api/models", timeout=10))
     print("engine:", m["engine"], "· RAM", m["ram_gb"], "GB · free", m["free_gb"], "GB · recommended",
@@ -131,7 +161,7 @@ def main() -> None:
 
     if not a.no_model:
         step(f"download {a.model} through the app")
-        r = ok(httpx.post(f"{BASE}/api/models/{a.model}/download", headers=H, timeout=10))
+        r = ok(httpx.post(f"{BASE}/api/models/{a.model}/download", params={"use": "true"}, headers=H, timeout=10))
         if not r.get("ok"):
             fail(f"download refused: {r}", proc, data)
 

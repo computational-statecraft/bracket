@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Str
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import cloud_llm, config, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
+from . import apple_llm, cloud_llm, config, draft, engine, lexicon, library, local_llm, models, prompts, store, validate
 from .nlp import Sentence, align, split_sentences
 
 FRONT = config.ROOT / "frontend"
@@ -124,14 +124,79 @@ async def put_settings(changes: dict):
     return {"settings": config.public()}
 
 
+@app.get("/api/local/options")
+async def local_options():
+    """Every way to run the local tier, what is already on this computer first: Ollama's models (if Ollama is
+    running), Apple's on-device model (or why it is unavailable), models bracket has downloaded, then downloads."""
+    ollama, apple = await asyncio.gather(local_llm.ollama_models(), asyncio.to_thread(apple_llm.status))
+    builtin = models.listing()
+    installed = [m for m in builtin["models"] if m["installed"] and not m["hidden"]]
+    if ollama["models"]:
+        rec = {"engine": "ollama", "model": local_llm.preferred_ollama(ollama["models"])}
+    elif apple["available"]:
+        rec = {"engine": "apple", "model": ""}
+    elif installed:
+        rec = {"engine": "builtin", "model": installed[-1]["id"]}
+    else:
+        rec = {"engine": "builtin", "model": next(m["id"] for m in builtin["models"] if m["recommended"])}
+    return {"current": {"engine": config.LOCAL_ENGINE, "model": config.LOCAL_MODEL, "label": local_llm.model_name(),
+                        "chosen": bool(config.LOCAL_ENGINE), "fixed": config.source_of("local_engine").startswith("env:")},
+            "ollama": ollama, "apple": apple, "builtin": {**builtin, "engine": engine.status()}, "recommended": rec}
+
+
+class UseIn(BaseModel):
+    engine: str
+    model: str = ""
+
+
+@app.post("/api/local/use")
+async def local_use(body: UseIn):
+    """Run the local tier on this choice from now on (remembered in settings)."""
+    eng = body.engine
+    if eng == "builtin":
+        e = models.BY_ID.get(body.model)
+        if not e or not models.installed(e):
+            return JSONResponse({"ok": False, "error": "that model is not downloaded"}, status_code=400)
+        config.write_file({"local_engine": "builtin", "local_model": body.model, "local_model_path": None})
+        asyncio.create_task(engine.ensure())
+    elif eng == "ollama":
+        if not body.model:
+            return JSONResponse({"ok": False, "error": "which Ollama model?"}, status_code=400)
+        url = config.LOCAL_URL if config.LOCAL_ENGINE == "ollama" and config.LOCAL_URL else local_llm.OLLAMA_DEFAULT
+        config.write_file({"local_engine": "ollama", "local_model": body.model, "local_url": url})
+        await engine.stop()
+    elif eng == "apple":
+        st = await asyncio.to_thread(apple_llm.status, 0)
+        if not st["available"]:
+            return JSONResponse({"ok": False, "error": st["reason"]}, status_code=400)
+        config.write_file({"local_engine": "apple", "local_model": None})
+        await engine.stop()
+    else:
+        return JSONResponse({"ok": False, "error": f"unknown engine {eng}"}, status_code=400)
+    store.log("local.use", {"engine": eng, "model": body.model})
+    asyncio.create_task(local_llm.warm())
+    return {"ok": True, "engine": config.LOCAL_ENGINE, "label": local_llm.model_name()}
+
+
+_focus_hook = None   # set by the launcher: bring the app's window forward when it is opened a second time
+
+
+@app.post("/api/focus")
+def focus():
+    if _focus_hook:
+        _focus_hook()
+    return {"ok": True, "window": bool(_focus_hook)}
+
+
 @app.get("/api/models")
 def list_models():
     return {**models.listing(), "engine": engine.status(), "local_engine": config.LOCAL_ENGINE}
 
 
 @app.post("/api/models/{model_id}/download")
-async def download_model(model_id: str):
-    res = models.start_download(model_id)
+async def download_model(model_id: str, use: bool = False):
+    """Start (or resume) a download; use=true runs the model as soon as it has arrived and checked out."""
+    res = models.start_download(model_id, use=use)
     store.log("model.download", {"model": model_id, **res})
     return JSONResponse(res, status_code=200 if res["ok"] else 400)
 
@@ -381,8 +446,8 @@ async def propose_stream(request: Request, tier: str, sentence: str, strength: i
             async for ev in events:
                 if await request.is_disconnected():
                     break
-                if "delta" in ev:
-                    acc += ev["delta"]
+                if "delta" in ev or "replace" in ev:
+                    acc = ev["replace"] if "replace" in ev else acc + ev["delta"]
                     yield f"event: delta\ndata: {json.dumps({'text': acc})}\n\n"
                 elif "error" in ev:
                     store.log(kind, {"source": source, "error": ev["error"], "ms": ev.get("ms")}, sentence_id)
