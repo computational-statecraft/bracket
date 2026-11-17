@@ -182,8 +182,10 @@ table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14p
 th, td { text-align: left; padding: 12px 14px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
 th { font: 500 10px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
 td:first-child { font-family: var(--serif); font-size: 18px; }
-tr.us td { color: var(--fg); } tr.us td:first-child { color: var(--brass-strong); }
-td .y { color: var(--brass); } td .n { color: var(--ghost); }
+tbody tr.us td { color: var(--fg); } tr.us td:first-child { color: var(--brass-strong); }
+tbody td:not(:first-child) { color: var(--dim); }
+tr.grp th { padding: 26px 0 8px; color: var(--brass); border-bottom: 1px solid var(--hair); }
+tr.us td { padding-top: 22px; border-top: 1px solid var(--brass); }
 
 /* ---------- download ---------- */
 .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 30px; }
