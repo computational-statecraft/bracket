@@ -181,6 +181,11 @@ class _Bridge:
     def __init__(self):
         self.window = None
 
+    def set_theme(self, dark):
+        """The page changed between light and dark: the window's own chrome follows."""
+        _style_window(self.window, bool(dark))
+        return True
+
     def toggle_fullscreen(self):
         self.window.toggle_fullscreen()
         return True
@@ -218,6 +223,65 @@ class _Bridge:
         return True
 
 
+DARK_BG, LIGHT_BG = "#0a0a0b", "#ffffff"
+
+
+def _style_window(window, dark: bool) -> None:
+    """Make the title bar part of the page: on macOS a transparent title bar over the page's own colour, the traffic
+    lights kept and the title hidden; on Windows 10/11 a dark or light caption in the same colour. Best effort: the
+    plain system title bar is what remains if any of this is unavailable."""
+    if window is None:
+        return
+    hexbg = DARK_BG if dark else LIGHT_BG
+    rgb = tuple(int(hexbg[i:i + 2], 16) for i in (1, 3, 5))
+    if sys.platform == "darwin":
+        try:
+            import AppKit
+            from PyObjCTools import AppHelper
+        except ImportError:
+            return
+
+        def apply():
+            w = window.native
+            if w is None:
+                return
+            try:
+                color = AppKit.NSColor.colorWithSRGBRed_green_blue_alpha_(*(c / 255 for c in rgb), 1.0)
+                w.setTitlebarAppearsTransparent_(True)
+                w.setTitleVisibility_(1)                 # NSWindowTitleHidden
+                w.setBackgroundColor_(color)
+                try:                                     # pywebview paints the title bar grey; paint it the page's colour
+                    w.contentView().superview().subviews().lastObject().setBackgroundColor_(color)
+                except Exception:  # noqa: BLE001
+                    pass
+                name = AppKit.NSAppearanceNameDarkAqua if dark else AppKit.NSAppearanceNameAqua
+                w.setAppearance_(AppKit.NSAppearance.appearanceNamed_(name))
+                print(f"bracket: window styled ({'dark' if dark else 'light'})", flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"bracket: window styling skipped ({e})", flush=True)
+
+        AppHelper.callAfter(apply)
+    elif sys.platform == "win32":
+        try:
+            import ctypes
+
+            hwnd = None
+            try:
+                hwnd = int(window.native.Handle.ToInt64())
+            except Exception:  # noqa: BLE001
+                hwnd = ctypes.windll.user32.FindWindowW(None, window.title)
+            if not hwnd:
+                return
+            dwm = ctypes.windll.dwmapi
+            on = ctypes.c_int(1 if dark else 0)
+            dwm.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(on), ctypes.sizeof(on))        # immersive dark mode
+            colorref = ctypes.c_int(rgb[0] | (rgb[1] << 8) | (rgb[2] << 16))
+            dwm.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(colorref), ctypes.sizeof(colorref))  # caption (Windows 11)
+            print(f"bracket: window styled ({'dark' if dark else 'light'})", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"bracket: window styling skipped ({e})", flush=True)
+
+
 def _app_window(url: str, server, thread: threading.Thread, server_app, check_after: float = 0) -> int | None:
     """bracket in its own window. Returns the exit code when the window closes, or None if no native window can be
     shown here (then the caller falls back to the browser)."""
@@ -230,8 +294,8 @@ def _app_window(url: str, server, thread: threading.Thread, server_app, check_af
     bridge = _Bridge()
     try:
         light = server_app.config.THEME == "light"   # open in the theme's colour: no dark flash before a light page
-        window = webview.create_window("bracket", url, width=1440, height=920, min_size=(960, 640),
-                                       background_color="#ffffff" if light else "#0a0a0b", text_select=True, js_api=bridge)
+        window = webview.create_window("[bracket]", url, width=1440, height=920, min_size=(960, 640),
+                                       background_color=LIGHT_BG if light else DARK_BG, text_select=True, js_api=bridge)
     except Exception as e:  # noqa: BLE001
         print(f"bracket: no app window ({e}); opening the browser", flush=True)
         return None
@@ -249,6 +313,7 @@ def _app_window(url: str, server, thread: threading.Thread, server_app, check_af
 
     api_module._focus_hook = bring_forward
     window.events.closed += lambda: setattr(server, "should_exit", True)
+    window.events.shown += lambda: _style_window(window, not light)
 
     def watch():
         if check_after:
@@ -285,6 +350,7 @@ def _check_window(window, seconds: float) -> int:
                                       "!!(window.pywebview && window.pywebview.api && window.pywebview.api.save_files)]")
             if last and last[1] and last[2]:
                 print(f"WINDOW CHECK PASSED: {last}", flush=True)
+                time.sleep(float(os.environ.get("BRACKET_WINDOW_HOLD", "0") or 0))   # CI: time to photograph it
                 return 0
         except Exception as e:  # noqa: BLE001
             last = e
@@ -308,7 +374,7 @@ def _window(url: str, server, thread: threading.Thread, config) -> bool:
         server.should_exit = True
         root.after(150, root.destroy)
 
-    root.title("bracket")
+    root.title("[bracket]")
     root.configure(bg="#0a0a0b", padx=28, pady=22)
     root.resizable(False, False)
     fg, dim = "#ffffff", "#8a8a8a"

@@ -110,15 +110,28 @@ jobs:
             macOS)   exe=dist/bracket.app/Contents/MacOS/bracket ;;
             *)       exe=dist/bracket/bracket.exe ;;
           esac
-          uv run --no-sync python packaging/smoke.py "$exe" --window
+          uv run --no-sync --with pillow python packaging/smoke.py "$exe" --window
+      - uses: actions/upload-artifact@v4   # a photograph of the window, to check how it looks (a few hundred KB)
+        if: runner.os != 'Linux' && always()
+        with:
+          name: "window-${{ matrix.name }}"
+          path: shots/*
+          retention-days: 1
+          if-no-files-found: ignore
       - name: Package
         if: inputs.keep_apps || startsWith(github.ref, 'refs/tags/')
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
             macOS)
-              mkdir -p dmg && cp -R dist/bracket.app dmg/ && ln -s /Applications dmg/Applications
-              hdiutil create -volname bracket -srcfolder dmg -ov -format UDZO "out/bracket-${{ matrix.name }}.dmg" ;;
+              # a designed install window (background, icon positions, volume icon); the plain image if that fails
+              tiffutil -cathidpicheck build/dmg-background.png build/dmg-background@2x.png -out build/dmg-background.tiff
+              if ! uv run --no-sync --with dmgbuild dmgbuild -s packaging/dmg_settings.py -D app=dist/bracket.app \
+                   bracket "out/bracket-${{ matrix.name }}.dmg"; then
+                echo "::warning::dmgbuild failed; making a plain disk image"
+                mkdir -p dmg && cp -R dist/bracket.app dmg/ && ln -s /Applications dmg/Applications
+                hdiutil create -volname bracket -srcfolder dmg -ov -format UDZO "out/bracket-${{ matrix.name }}.dmg"
+              fi ;;
             Windows)
               7z a -tzip "out/bracket-${{ matrix.name }}.zip" ./dist/bracket >/dev/null ;;
             *)
