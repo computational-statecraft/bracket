@@ -1,4 +1,4 @@
-/* bracket — the project site's simulation of the live screen, and the "try the check" widget.
+/* [bracket] — the project site's simulation of the live screen, with a spotlight tour.
    Nothing here calls a model: every proposal is written out below, by hand, for each position of the dials. */
 (() => {
 'use strict';
@@ -43,10 +43,9 @@ const TREE = {
   work: { ladder: null, min: -1, max: 2, levels: {
     '-1': { shorter: ['consider', 'explore', 'study'], same: ['explore', 'consider', 'look into'], longer: ['explore the possibility of', 'give consideration to', 'examine options for'],
             plain: ['think about', 'look at', 'talk about'], formal: ['give due consideration to', 'examine the feasibility of', 'consider the merits of'] },
-    0: { shorter: ['seek', 'pursue', 'build'], same: ['pursue', 'seek', { t: 'work, within two years, towards', flags: ['numbers changed'] }],
+    0: { shorter: ['seek', 'pursue', 'build'], same: ['pursue', 'seek', 'strive for'],
          longer: ['work steadily towards', 'make every effort to reach', 'work together towards'],
-         plain: ['try to agree', 'aim for', 'work on'], formal: ['endeavor to achieve', 'work assiduously towards', 'seek to attain'],
-         dropped: [{ t: 'work with the IMO towards', why: 'named an organization (IMO) not in the sentence' }] },
+         plain: ['try to agree', 'aim for', 'work on'], formal: ['endeavor to achieve', 'work assiduously towards', 'seek to attain'] },
     1: { shorter: ['adopt', 'agree', 'set'], same: ['commit to', 'adopt', 'agree on'], longer: ['commit themselves to', 'agree to adopt', 'undertake to establish'],
          plain: ['agree on', 'settle on', 'sign up to'], formal: ['undertake to adopt', 'commit themselves to', 'resolve to establish'] },
     2: { shorter: ['establish', 'implement', 'enact'], same: ['establish without delay', 'put in place', 'implement'], longer: ['establish and implement without delay', 'fully put in place', 'fully implement'],
@@ -96,9 +95,7 @@ function options(r) {
   const tree = TREE[r.tid];
   const level = tree.levels[String(r.level)];
   const list = r.register === 'institutional' ? level[r.length] : level[r.register];
-  const opts = list.map(o => typeof o === 'string' ? { t: o, flags: [] } : { t: o.t, flags: o.flags || [] });
-  const dropped = r.register === 'institutional' && r.length === 'same' ? (level.dropped || []) : [];
-  return { opts, dropped };
+  return { opts: list.map(t => ({ t, flags: [] })) };
 }
 function markChanges(src, out) {
   const known = new Set((src.toLowerCase().match(/[\w']+/g) || []));
@@ -143,16 +140,16 @@ function render() {
     : S.mode === 'bracket' ? '↑↓ choose · ↵ settle on this wording · esc' : 'Double-click an underlined word · click a sentence, ⇧↵ agree · undo';
   stage.querySelectorAll('.cell').forEach(c => c.addEventListener('click', () => { S.rail.cur = +c.dataset.i; accept(); }));
   stage.querySelectorAll('.slot').forEach(c => c.addEventListener('click', () => { S.brk.cur = +c.dataset.i; settle(); }));
+  if (typeof placeSpot === 'function') requestAnimationFrame(placeSpot);
 }
 function panel(s) {
   if (S.mode === 'rail' && S.rail.sid === s.id) {
-    const r = S.rail, tree = TREE[r.tid], { opts, dropped } = options(r);
+    const r = S.rail, tree = TREE[r.tid], { opts } = options(r);
     const strength = tree.ladder
       ? tree.ladder.map((w, i) => `<span class="r${i === r.level ? ' cur' : ''}">${esc(w)}</span>`).join('')
       : `<span class="v">${STRENGTH_WORDS[r.level]}</span>`;
-    const cells = opts.map((o, i) => `<button type="button" class="cell${i === r.cur ? ' cur' : ''}" data-i="${i}"><span class="n">${i + 1}</span><p>${markChanges(r.source, o.t)}<span class="src">local</span>${o.flags.length ? `<span class="flag">▲ ${esc(o.flags.join(' · '))}</span>` : ''}</p></button>`).join('');
-    const drop = dropped.length ? `<div class="dropped">${dropped.length} proposal not shown · “${esc(dropped[0].t)}” ${esc(dropped[0].why)}</div>` : '';
-    return `<div class="panel"><div class="dials"><span><span class="lab">Strength ←→</span> ${strength}</span><span><span class="lab">Length ↑↓</span> <span class="v">${r.length}</span></span><span><span class="lab">Register R</span> <span class="v">${r.register === 'formal' ? 'formal diplomatic' : r.register}</span></span></div><div class="grid">${cells}</div>${drop}<div class="addalt">⇧↵ keeps the choice beside “${esc(r.source)}”, in brackets</div></div>`;
+    const cells = opts.map((o, i) => `<button type="button" class="cell${i === r.cur ? ' cur' : ''}" data-i="${i}"><span class="n">${i + 1}</span><p>${markChanges(r.source, o.t)}<span class="src">local</span></p></button>`).join('');
+    return `<div class="panel"><div class="dials"><span><span class="lab">Strength ←→</span> ${strength}</span><span><span class="lab">Length ↑↓</span> <span class="v">${r.length}</span></span><span><span class="lab">Register R</span> <span class="v">${r.register === 'formal' ? 'formal diplomatic' : r.register}</span></span></div><div class="grid">${cells}</div></div>`;
   }
   if (S.mode === 'bracket' && S.brk.sid === s.id) {
     const b = S.brk;
@@ -204,7 +201,7 @@ function accept() {
   snapshot();
   edit(s, t.start, t.end, o.t); t.end = t.start + o.t.length; t.level = r.level;
   S.changed = { sid: s.id, start: t.start, end: t.end };
-  record('accept', `local · “${r.source}” → “${o.t}”${o.flags.length ? ' · ▲ ' + o.flags.join(', ') : ''}`);
+  record('accept', `local · “${r.source}” → “${o.t}”`);
   S.mode = 'rest'; S.rail = null; render(); toast(`Accepted “${o.t}” · sentence ${s.id.slice(1)} is now v${s.version}`, true);
   emit({ type: 'accept', tid: t.id });
 }
@@ -340,21 +337,44 @@ const STEPS = [
     done: e => e.type === 'settle' && e.sid === 's3' },
   { title: 'Agree it', body: `<p>Now ${kbd('⇧↵')} marks sentence 3 agreed. Editing an agreed sentence returns it to draft: nothing is agreed until everything is agreed.</p>`,
     done: e => e.type === 'agree' && e.sid === 's3' },
-  { title: 'The check at work', body: `<p>Double-click <strong>work towards</strong> in sentence 2. One proposal is flagged ▲ because it adds a number. Another never reaches the room: it named an organization the sentence did not mention, so the check removed it.</p>`,
+  { title: 'Any phrase, not only a word', body: `<p>Double-click <strong>work towards</strong> in sentence 2. Phrases work the same way: ${kbd('←')} for something weaker, like <em>explore</em>; ${kbd('→')} for something stronger, like <em>commit to</em>.</p>`,
     done: e => e.type === 'open' && e.tid === 'work' },
   { title: 'That is the loop', body: `<p>Accept or reject the proposals for sentence 2, then agree sentences 1 and 2 to finish the statement.</p><p>Everything you did is in the record below the guide. The app keeps the same record, and at the end of a session saves the statement, each sentence's history and any dissent.</p>`,
     done: e => e.type === 'agree' && e.all, final: true },
 ];
+// what each step's spotlight falls on, in order; a function, because the page changes as the visitor works
+const SPOT = [
+  () => '[data-t="note"]',
+  () => '.panel .dials', () => '.panel .dials', () => '.panel .dials',
+  () => '.panel .grid',
+  () => '.row[data-id="s3"]',
+  () => (S.mode === 'bracket' ? '.panel.brkp' : '.row[data-id="s3"] [data-b]'),
+  () => '.row[data-id="s3"]',
+  () => (S.mode === 'rail' ? '.panel' : '[data-t="work"]'),
+  () => (S.mode === 'rail' ? '.row:has(.panel)' : '.row:not(.agreed)'),
+];
+const screenEl = $('#screen');
+const spot = document.createElement('div'); spot.className = 'spot'; spot.setAttribute('aria-hidden', 'true'); screenEl.appendChild(spot);
+function placeSpot() {
+  const sel = finished ? null : SPOT[step] && SPOT[step]();
+  const el = sel && screenEl.querySelector(sel);
+  if (!el) { spot.classList.remove('on'); return; }
+  const a = screenEl.getBoundingClientRect(), r = el.getBoundingClientRect(), pad = 10;
+  Object.assign(spot.style, { left: `${r.left - a.left - pad}px`, top: `${r.top - a.top - pad}px`, width: `${r.width + 2 * pad}px`, height: `${r.height + 2 * pad}px` });
+  spot.classList.add('on');
+}
+addEventListener('resize', placeSpot);
 let step = 0, finished = false;
 function showStep() {
   const s = STEPS[step];
   $('#gcount').textContent = finished ? 'Done' : `Step ${step + 1} of ${STEPS.length}`;
   $('#gtitle').textContent = finished ? 'The statement is agreed' : s.title;
   $('#gbody').innerHTML = finished
-    ? `<p class="done">Every sentence is agreed.</p><p>That is bracket: people decide every word, the machine offers alternatives on request, and the record keeps what was offered and refused. <a href="#download">Download the app</a> to use it with your own drafts, and your own model.</p>`
+    ? `<p class="done">Every sentence is agreed.</p><p>That is [bracket]: people decide every word, the machine offers alternatives on request, and the record keeps what was offered and refused. <a href="#download">Download the app</a> to use it with your own drafts, and your own model.</p>`
     : s.body;
   $('#gback').disabled = step === 0 && !finished;
   $('#gnext').hidden = finished || s.final;
+  requestAnimationFrame(placeSpot);
 }
 function emit(e) {
   if (finished) return;
@@ -372,35 +392,4 @@ $('#greset').addEventListener('click', () => {
 record('session.begin', '5 sentences');
 render(); showStep();
 
-/* ---------------- "try the check" ---------------- */
-const SENTENCE = 'Members will work towards a common approach to search and rescue, consistent with international law.';
-const SPAN = 'work towards';
-const MODALS = ['may', 'might', 'can', 'could', 'should', 'shall', 'must', 'will', 'would', 'ought'];
-const NEG = ['not', 'never', 'no', 'nor', 'neither', 'without', "n't"];
-const NUMWORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'hundred', 'thousand', 'million'];
-const words = s => (s.toLowerCase().replace(/n't\b/g, " n't").match(/[a-z']+|\d[\d,.]*/g) || []);
-function check(p) {
-  const known = SENTENCE.toLowerCase();
-  const names = (p.match(/\b([A-Z]{2,}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g) || []).filter(n => !new RegExp(`\\b${n.toLowerCase()}\\b`).test(known));
-  if (names.length) return { tag: 'no', label: 'Removed', why: `It names ${names.join(', ')}, which the sentence does not mention. The room never sees it.` };
-  const w = words(p), src = words(SPAN), flags = [];
-  const set = (arr, list) => arr.filter(x => list.includes(x)).sort().join();
-  if (set(w, NUMWORDS) !== set(src, NUMWORDS) || (p.match(/\d/g) || []).length) flags.push('numbers changed');
-  if (set(w, MODALS) !== set(src, MODALS)) flags.push('modal shifted');
-  if (set(w, NEG) !== set(src, NEG)) flags.push('negation changed');
-  if (w.length > 1.6 * src.length + 3) flags.push('much longer');
-  if (flags.length) return { tag: 'flag', label: 'Shown, flagged ▲', why: `${flags.join(' · ')}. The room sees it, marked, and decides.` };
-  return { tag: 'ok', label: 'Shown', why: 'It rewords without adding a claim, a name or a number.' };
-}
-const gin = $('#gin'), verdict = $('#verdict');
-function judge() {
-  const p = gin.value.trim();
-  if (!p) { verdict.innerHTML = ''; return; }
-  const v = check(p);
-  verdict.innerHTML = `<div><span class="tag caps ${v.tag}">${v.label}</span><span class="small">${esc(v.why)}</span></div>
-    <div class="out">${esc(SENTENCE.replace(SPAN, '\u0000')).replace('\u0000', `<span style="color:var(--brass)">${esc(p)}</span>`)}</div>`;
-}
-gin.addEventListener('input', judge);
-document.querySelectorAll('#guardbox .tries button').forEach(b => b.addEventListener('click', () => { gin.value = b.textContent; judge(); }));
-judge();
 })();
