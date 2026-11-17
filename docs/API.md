@@ -33,6 +33,8 @@ curl -s -X POST http://127.0.0.1:8765/api/settings -H 'X-Bracket: 1' -H 'Content
 
 | Method and path | Does |
 |---|---|
+| `GET /api/local/options` | every way to run the local tier, what is on this computer first: Ollama's models (if running), Apple's on-device model (or why it is unavailable), downloaded and downloadable models, and a recommendation |
+| `POST /api/local/use` | `{engine, model}` (`ollama` + model name, `apple`, or `builtin` + catalog id): use it from now on |
 | `GET /api/models` | the catalog with sizes, which are installed and recommended, download progress, memory and free disk, and the engine's state (`no-binary`, `no-model`, `starting`, `ready`, `failed`) |
 | `POST /api/models/{id}/download` | start (or resume) a download; poll `GET /api/models` for progress |
 | `POST /api/models/{id}/cancel` | stop a download (it resumes from where it stopped next time) |

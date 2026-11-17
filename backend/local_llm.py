@@ -6,7 +6,10 @@ Three engines, chosen in Settings (``local_engine``):
 - ``ollama``: an Ollama server you run yourself (``local_url``, default http://127.0.0.1:11434; ``local_model`` is
   the Ollama tag, e.g. ``gemma4:e4b``);
 - ``openai``: any server that speaks the OpenAI chat API (LM Studio, llama.cpp, vLLM): ``local_url`` up to ``/v1``,
-  ``local_model`` the server's model name.
+  ``local_model`` the server's model name;
+- ``apple``: Apple's on-device model (Apple Intelligence, macOS 26+), see ``apple_llm``.
+
+Until one is chosen (``local_engine`` unset), the setup screen offers what is already on the computer first.
 
 Speed settings, all aimed at the time between a double-click and the first word on screen: one HTTP client for the
 life of the server; the model kept loaded; a small context window; a tight ceiling on the answer; no "thinking".
@@ -39,12 +42,49 @@ def _http() -> httpx.AsyncClient:
     return c
 
 
+OLLAMA_DEFAULT = "http://127.0.0.1:11434"
+ENGINE_LABELS = {"builtin": "built in", "ollama": "Ollama", "openai": "local server", "apple": "Apple Intelligence"}
+
+
 def model_name() -> str:
     if config.LOCAL_ENGINE == "builtin":
         from . import models
 
         return models.chosen_label() or "no model"
+    if config.LOCAL_ENGINE == "apple":
+        from . import apple_llm
+
+        return apple_llm.LABEL
+    if not config.LOCAL_ENGINE:
+        return ""
     return config.LOCAL_MODEL or "(default)"
+
+
+# Ollama models that cannot write text (embedding models) are not offered
+_NOT_CHAT = ("embed", "bge-", "minilm", "rerank")
+# when the setup screen preselects one of Ollama's models, these families first: good at instruction-following prose
+_PREFER = ("gemma", "qwen", "llama", "mistral", "phi")
+
+
+async def ollama_models(url: str | None = None) -> dict:
+    """What Ollama has on this computer: {'running', 'url', 'models': [{'name', 'size_gb'}]}. Never raises."""
+    url = (url or (config.LOCAL_URL if config.LOCAL_ENGINE == "ollama" else "") or OLLAMA_DEFAULT).rstrip("/")
+    try:
+        r = await _http().get(f"{url}/api/tags", timeout=3)
+        r.raise_for_status()
+        models = [{"name": m.get("name"), "size_gb": round(m.get("size", 0) / 1e9, 1)}
+                  for m in r.json().get("models", []) if m.get("name") and not any(k in m["name"].lower() for k in _NOT_CHAT)]
+        return {"running": True, "url": url, "models": models}
+    except Exception as e:  # noqa: BLE001 — not installed or not running: an answer, not an error
+        return {"running": False, "url": url, "models": [], "error": str(e)[:100]}
+
+
+def preferred_ollama(models: list[dict]) -> str | None:
+    for fam in _PREFER:
+        for m in models:
+            if fam in m["name"].lower():
+                return m["name"]
+    return models[0]["name"] if models else None
 
 
 def _base() -> str:
@@ -57,6 +97,13 @@ def _base() -> str:
 
 async def status() -> dict:
     eng = config.LOCAL_ENGINE
+    if not eng:
+        return {"ok": False, "engine": "", "model": "", "state": "unchosen", "error": "not chosen", "detail": "Choose a model on the setup screen."}
+    if eng == "apple":
+        from . import apple_llm
+
+        st = await asyncio.to_thread(apple_llm.status)
+        return {"ok": st["available"], "engine": eng, "model": apple_llm.LABEL, "error": None if st["available"] else "unavailable", "detail": st["reason"]}
     if eng == "off":
         return {"ok": False, "engine": eng, "model": "", "error": "off", "detail": "The local tier is turned off in Settings."}
     if eng == "builtin":
@@ -119,6 +166,9 @@ async def stream(msgs: list[dict], max_tokens: int = 200, timeout: float | None 
     if eng == "off":
         yield {"error": "the local tier is off", "ms": 0}
         return
+    if not eng:
+        yield {"error": "no local model chosen yet: choose one on the setup screen", "ms": 0}
+        return
     if eng == "builtin":
         from . import engine
 
@@ -128,7 +178,12 @@ async def stream(msgs: list[dict], max_tokens: int = 200, timeout: float | None 
                              "starting": "the local model is still loading", "no-binary": "the built-in engine is missing from this install"}.get(st["state"], st["detail"] or "the local engine is not running"), "ms": ms()}
             return
     try:
-        gen = _ollama(msgs, max_tokens, limit, model) if eng == "ollama" else _openai(msgs, max_tokens, limit, model)
+        if eng == "apple":
+            from . import apple_llm
+
+            gen = apple_llm.stream(msgs, max_tokens, limit)
+        else:
+            gen = _ollama(msgs, max_tokens, limit, model) if eng == "ollama" else _openai(msgs, max_tokens, limit, model)
         async for ev in gen:
             if "error" in ev:
                 yield {"error": ev["error"], "ms": ms()}
@@ -210,7 +265,7 @@ async def complete(msgs: list[dict] | str, n: int, timeout: float | None = None,
         msgs = [{"role": "user", "content": msgs}]
     text, res = "", {"ok": False, "lines": [], "ms": 0, "error": "no answer"}
     async for ev in stream(msgs, max_tokens, timeout, model):
-        text += ev.get("delta", "")
+        text = ev["replace"] if "replace" in ev else text + ev.get("delta", "")
         if "error" in ev:
             return {"ok": False, "lines": [], "ms": ev["ms"], "error": ev["error"]}
         if ev.get("done"):
@@ -226,7 +281,7 @@ async def check() -> dict:
         await engine.ensure()
     st = await status()
     if not st["ok"]:
-        return {"ok": False, "engine": st["engine"], "model": st["model"], "state": st.get("state"), "error": st.get("error"), "detail": st.get("detail")}
+        return {"ok": False, "engine": st["engine"], "model": st["model"], "state": st.get("state") or st.get("error"), "error": st.get("error"), "detail": st.get("detail")}
     # a generous timeout: the first call after startup may still be loading the model into memory
     res = await complete("Give two other words for: begin\nOne per line, nothing else.", 2, timeout=90, max_tokens=24)
     ok = res["ok"] and bool(res["lines"])

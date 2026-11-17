@@ -21,7 +21,8 @@ if (BUILD / "llama").is_dir():
     datas.append((str(BUILD / "llama"), "llama"))
 binaries, hidden = [], collect_submodules("uvicorn") + ["backend.app"]
 for pkg in ("spacy", "thinc", "en_core_web_sm", "srsly", "catalogue", "confection", "weasel", "blis", "cymem", "preshed",
-            "murmurhash", "spacy_legacy", "spacy_loggers", "lemminflect", "nltk", "pypdf", "anthropic", "wasabi"):
+            "murmurhash", "spacy_legacy", "spacy_loggers", "lemminflect", "nltk", "pypdf", "anthropic", "wasabi",
+            "webview", "apple_fm_sdk"):   # the app window (macOS, Windows); Apple's on-device model (macOS, if built)
     try:
         d, b, h = collect_all(pkg)
     except Exception:  # a package missing on this platform

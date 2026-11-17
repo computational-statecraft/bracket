@@ -18,6 +18,8 @@ request, the following. Each keeps its own license.
 | [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) | the optional Claude tier | MIT |
 | [pypdf](https://github.com/py-pdf/pypdf) | reading PDF documents for the library | BSD-3-Clause |
 | [platformdirs](https://github.com/tox-dev/platformdirs) | the per-user data folder | MIT |
+| [pywebview](https://github.com/r0x0r/pywebview) (with PyObjC on macOS, pythonnet and Microsoft's WebView2 loader on Windows) | the app's own window | BSD-3-Clause; MIT; Microsoft WebView2 SDK licence |
+| [Foundation Models SDK for Python](https://github.com/apple/python-apple-fm-sdk) (macOS build only) | Apple's on-device model | Apache-2.0 |
 | Cormorant Garamond, DM Sans | typefaces | SIL Open Font License 1.1 (`frontend/fonts/OFL.txt`) |
 
 The full dependency list with exact versions is `uv.lock`; each package's own license file is inside the app bundle

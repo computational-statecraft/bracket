@@ -72,7 +72,6 @@ def test_download_resumes_verifies_and_selects(tmp_path, monkeypatch, settings_f
     monkeypatch.setattr(models, "CATALOG", [entry])
     monkeypatch.setattr(models, "BY_ID", {"fake": entry})
     monkeypatch.setattr(config, "MODELS_DIR", tmp_path / "models")
-    monkeypatch.setattr(config, "LOCAL_ENGINE", "ollama")   # do not try to start an engine
     (tmp_path / "models").mkdir()
     (tmp_path / "models" / "fake.part").write_bytes(payload[:100])   # an interrupted earlier attempt
     seen = []
@@ -85,14 +84,17 @@ def test_download_resumes_verifies_and_selects(tmp_path, monkeypatch, settings_f
     real = httpx.AsyncClient
     monkeypatch.setattr(models.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
 
+    monkeypatch.setattr("backend.engine.binary", lambda: None)   # no real engine to start
+
     async def run():
-        assert models.start_download("fake")["ok"]
+        assert models.start_download("fake", use=True)["ok"]
         await models._tasks["fake"]
+        await asyncio.sleep(0.05)
 
     asyncio.run(run())
     assert seen == ["bytes=100-"]
     assert models.installed(entry) and models._jobs["fake"]["state"] == "done"
-    assert config.LOCAL_MODEL == "fake" and models.chosen_path().name == "fake.gguf"
+    assert config.LOCAL_ENGINE == "builtin" and config.LOCAL_MODEL == "fake" and models.chosen_path().name == "fake.gguf"
 
 
 def test_a_corrupt_download_is_deleted(tmp_path, monkeypatch, settings_file):
@@ -216,3 +218,92 @@ def test_builtin_engine_starts_answers_and_stops(tmp_path, monkeypatch):
     chk, proc = asyncio.run(run())
     assert chk["ok"] and chk["sample"] == ["urge", "call upon"], chk
     assert proc.poll() is not None and engine.status()["state"] == "off"
+
+
+
+# ---------- choosing the local model: what is on this computer first ----------
+
+def _ollama_tags(models_):
+    def handler(request):
+        assert request.url.path == "/api/tags"
+        return httpx.Response(200, json={"models": [{"name": n, "size": 3_000_000_000} for n in models_]})
+    return handler
+
+
+def _patch_http(monkeypatch, handler):
+    real = httpx.AsyncClient
+
+    def client():
+        return real(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(local_llm, "_http", client)
+
+
+def test_a_fresh_install_has_no_model_chosen(settings_file):
+    assert config.LOCAL_ENGINE == ""
+    st = asyncio.run(local_llm.status())
+    assert not st["ok"] and st["state"] == "unchosen"
+
+
+def test_ollama_models_are_found_and_preferred(monkeypatch, settings_file, client):
+    _patch_http(monkeypatch, _ollama_tags(["nomic-embed-text:latest", "llama3.2:3b", "gemma3:4b"]))
+    o = client.get("/api/local/options").json()
+    assert o["ollama"]["running"] and [m["name"] for m in o["ollama"]["models"]] == ["llama3.2:3b", "gemma3:4b"]   # no embedding models
+    assert o["recommended"] == {"engine": "ollama", "model": "gemma3:4b"} and not o["current"]["chosen"]
+
+
+def test_without_ollama_the_recommendation_is_a_download(monkeypatch, settings_file, client):
+    def refuse(request):
+        raise httpx.ConnectError("refused")
+
+    _patch_http(monkeypatch, refuse)
+    o = client.get("/api/local/options").json()
+    assert not o["ollama"]["running"] and o["recommended"]["engine"] in ("builtin", "apple")
+
+
+def test_choosing_an_ollama_model_is_remembered(monkeypatch, settings_file, client):
+    _patch_http(monkeypatch, _ollama_tags(["gemma3:4b"]))
+    r = client.post("/api/local/use", json={"engine": "ollama", "model": "gemma3:4b"}, headers={"X-Bracket": "1"})
+    assert r.json()["ok"] and config.LOCAL_ENGINE == "ollama" and config.LOCAL_MODEL == "gemma3:4b"
+    assert json.loads(settings_file.read_text())["local_engine"] == "ollama"
+    assert asyncio.run(local_llm.status())["ok"]
+
+
+def test_apple_model_says_why_it_is_unavailable(monkeypatch, settings_file, client):
+    import sys
+
+    from backend import apple_llm
+
+    apple_llm._cache["v"] = None
+    st = apple_llm.status(0)
+    if sys.platform != "darwin":
+        assert st == {"available": False, "reason": "only on a Mac"}
+    r = client.post("/api/local/use", json={"engine": "apple"}, headers={"X-Bracket": "1"})
+    if not st["available"]:
+        assert r.status_code == 400 and r.json()["error"] == st["reason"] and config.LOCAL_ENGINE == ""
+
+
+def test_apple_snapshots_become_deltas(monkeypatch):
+    """The SDK streams the whole answer so far each time; bracket's pipeline expects pieces."""
+    import types
+
+    from backend import apple_llm
+
+    class Session:
+        def __init__(self, instructions=None, model=None):
+            assert instructions == "RULES"
+
+        def stream_response(self, prompt, options=None):
+            async def gen():
+                for snap in ["urge", "urge\ncall", "urge\ncall upon", "urge\nrequest"]:
+                    yield snap
+            return gen()
+
+    fm = types.SimpleNamespace(SystemLanguageModel=lambda **k: None, LanguageModelSession=Session,
+                               GenerationOptions=lambda **k: None,
+                               SystemLanguageModelGuardrails=types.SimpleNamespace(PERMISSIVE_CONTENT_TRANSFORMATIONS=1))
+    monkeypatch.setattr(apple_llm, "_sdk", lambda: fm)
+    monkeypatch.setattr(apple_llm, "status", lambda *a: {"available": True, "reason": ""})
+    monkeypatch.setattr(config, "LOCAL_ENGINE", "apple")
+    res = asyncio.run(local_llm.complete([{"role": "system", "content": "RULES"}, {"role": "user", "content": "x"}], 3))
+    assert res["ok"] and res["lines"] == ["urge", "request"]
