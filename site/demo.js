@@ -22,25 +22,20 @@ paintBtn();
    Each demo word has, for every position of the strength dial, three proposals at each length (shorter, same,
    longer) in the institutional register, and three each in the plain and formal registers. A proposal may carry the
    flags the app's check would add; "dropped" lists what the check would remove before the room saw it. */
-const LADDER = ['note', 'take note of', 'acknowledge', 'recognize', 'affirm', 'reaffirm', 'declare'];
 const TREE = {
-  note: { ladder: LADDER, levels: {
+  note: { min: -1, max: 3, levels: {
+    '-1': { shorter: ['see', 'mark', 'observe'], same: ['take note of', 'are aware of', 'have seen'], longer: ['have been informed of', 'are generally aware of', 'have taken account of'],
+         plain: ['know about', 'see', 'have heard about'], formal: ['take cognizance of', 'are cognizant of', 'duly observe'] },
     0: { shorter: ['see', 'observe', 'mark'], same: ['observe', 'take account of', 'are aware of'], longer: ['note with interest', 'take careful note of', 'have taken note of'],
          plain: ['see', 'know about', 'are aware of'], formal: ['take note of', 'duly note', 'note for the record'] },
-    1: { shorter: ['note', 'register', 'mark'], same: ['take note of', 'take account of', 'note carefully'], longer: ['take careful note of', 'take due note of', 'take full account of'],
-         plain: ['pay attention to', 'keep track of', 'take note of'], formal: ['take due note of', 'duly take note of', 'formally take note of'] },
-    2: { shorter: ['acknowledge', 'accept', 'grant'], same: ['acknowledge', 'accept', 'take stock of'], longer: ['acknowledge with appreciation', 'readily acknowledge', 'fully acknowledge'],
+    1: { shorter: ['acknowledge', 'accept', 'grant'], same: ['acknowledge', 'accept', 'take stock of'], longer: ['acknowledge with appreciation', 'readily acknowledge', 'fully acknowledge'],
          plain: ['accept', 'admit', 'grant'], formal: ['acknowledge with appreciation', 'duly acknowledge', 'formally acknowledge'] },
-    3: { shorter: ['recognize', 'value', 'credit'], same: ['recognize', 'appreciate', 'value'], longer: ['recognize and appreciate', 'fully recognize', 'recognize with appreciation'],
+    2: { shorter: ['recognize', 'value', 'credit'], same: ['recognize', 'appreciate', 'value'], longer: ['recognize and appreciate', 'fully recognize', 'recognize with appreciation'],
          plain: ['value', 'appreciate', 'see the worth of'], formal: ['recognize with appreciation', 'duly recognize', 'express our recognition of'] },
-    4: { shorter: ['affirm', 'confirm', 'back'], same: ['affirm', 'endorse', 'confirm'], longer: ['affirm our support for', 'strongly affirm', 'affirm and endorse'],
+    3: { shorter: ['affirm', 'confirm', 'back'], same: ['affirm', 'endorse', 'confirm'], longer: ['affirm our support for', 'strongly affirm', 'affirm and endorse'],
          plain: ['back', 'support', 'stand behind'], formal: ['affirm our endorsement of', 'solemnly affirm', 'formally affirm'] },
-    5: { shorter: ['reaffirm', 'reconfirm', 'renew'], same: ['reaffirm', 'reiterate support for', 'renew support for'], longer: ['reaffirm our full support for', 'strongly reaffirm', 'reaffirm and build on'],
-         plain: ['still back', 'still support', 'stand by'], formal: ['solemnly reaffirm', 'reaffirm our commitment to', 'formally reaffirm'] },
-    6: { shorter: ['declare', 'proclaim', 'state'], same: ['declare', 'proclaim', 'declare our support for'], longer: ['publicly declare our support for', 'declare our full commitment to', 'proclaim our support for'],
-         plain: ['announce support for', 'state support for', 'say we back'], formal: ['solemnly declare', 'formally proclaim', 'declare for the record'] },
   } },
-  work: { ladder: null, min: -1, max: 2, levels: {
+  work: { min: -1, max: 2, levels: {
     '-1': { shorter: ['consider', 'explore', 'study'], same: ['explore', 'consider', 'look into'], longer: ['explore the possibility of', 'give consideration to', 'examine options for'],
             plain: ['think about', 'look at', 'talk about'], formal: ['give due consideration to', 'examine the feasibility of', 'consider the merits of'] },
     0: { shorter: ['seek', 'pursue', 'build'], same: ['pursue', 'seek', 'strive for'],
@@ -52,7 +47,9 @@ const TREE = {
          plain: ['set up now', 'put in place now', 'make'], formal: ['establish forthwith', 'implement in full', 'give full effect to'] },
   } },
 };
-const STRENGTH_WORDS = { '-1': 'weaker', 0: 'same', 1: 'stronger', 2: 'much stronger' };
+// strength is shown relative to the wording the rail opened on
+const STRENGTH_WORDS = { '-3': 'weakest', '-2': 'weaker', '-1': 'weak', 0: 'same', 1: 'strong', 2: 'stronger', 3: 'strongest' };
+const strengthWord = r => STRENGTH_WORDS[Math.max(-3, Math.min(3, r.level - r.base))];
 
 /* ---------------- the statement ---------------- */
 const START = () => ({
@@ -145,9 +142,7 @@ function render() {
 function panel(s) {
   if (S.mode === 'rail' && S.rail.sid === s.id) {
     const r = S.rail, tree = TREE[r.tid], { opts } = options(r);
-    const strength = tree.ladder
-      ? tree.ladder.map((w, i) => `<span class="r${i === r.level ? ' cur' : ''}">${esc(w)}</span>`).join('')
-      : `<span class="v">${STRENGTH_WORDS[r.level]}</span>`;
+    const strength = `<span class="v">${strengthWord(r)}</span>`;
     const cells = opts.map((o, i) => `<button type="button" class="cell${i === r.cur ? ' cur' : ''}" data-i="${i}"><span class="n">${i + 1}</span><p>${markChanges(r.source, o.t)}<span class="src">local</span></p></button>`).join('');
     return `<div class="panel"><div class="dials"><span><span class="lab">Strength ←→</span> ${strength}</span><span><span class="lab">Length ↑↓</span> <span class="v">${r.length}</span></span><span><span class="lab">Register R</span> <span class="v">${r.register === 'formal' ? 'formal diplomatic' : r.register}</span></span></div><div class="grid">${cells}</div></div>`;
   }
@@ -165,16 +160,16 @@ function snapshot() { S.undo.push(JSON.stringify(S.doc)); if (S.undo.length > 50
 function openRail(sid, tid) {
   const s = sent(sid), t = s.targets.find(x => x.id === tid);
   S.focus = sid; S.mode = 'rail'; S.changed = null;
-  S.rail = { sid, tid, level: t.level, length: 'same', register: 'institutional', cur: 0, source: s.text.slice(t.start, t.end) };
+  S.rail = { sid, tid, level: t.level, base: t.level, length: 'same', register: 'institutional', cur: 0, source: s.text.slice(t.start, t.end) };
   record('rail.open', `“${S.rail.source}”`); record('proposal.local', '3 shown');
   render(); emit({ type: 'open', tid });
 }
 function dial(kind, delta) {
   const r = S.rail, tree = TREE[r.tid];
   if (kind === 'strength') {
-    const min = tree.ladder ? 0 : tree.min, max = tree.ladder ? tree.ladder.length - 1 : tree.max;
+    const min = tree.min, max = tree.max;
     const next = Math.max(min, Math.min(max, r.level + delta));
-    if (next === r.level) { toast(delta > 0 ? 'That is the strongest rung' : 'That is the weakest rung'); return; }
+    if (next === r.level) { toast(delta > 0 ? 'That is the strongest wording here' : 'That is the weakest wording here'); return; }
     r.level = next;
   } else if (kind === 'length') {
     const L = ['shorter', 'same', 'longer'], i = L.indexOf(r.length) + delta;
@@ -183,7 +178,7 @@ function dial(kind, delta) {
   } else {
     const R = ['plain', 'institutional', 'formal']; r.register = R[(R.indexOf(r.register) + 1) % 3];
   }
-  r.cur = 0; record('proposal.local', `3 shown · ${tree.ladder ? tree.ladder[r.level] : STRENGTH_WORDS[r.level]} · ${r.length} · ${r.register}`);
+  r.cur = 0; record('proposal.local', `3 shown · ${strengthWord(r)} · ${r.length} · ${r.register}`);
   render(); emit({ type: 'dial', kind, level: r.level, length: r.length, register: r.register });
 }
 function closeRail(logIt = true) {
@@ -325,8 +320,8 @@ const STEPS = [
     done: e => e.type === 'open' && e.tid === 'note' },
   { title: 'Make it stronger', body: `<p>Press ${kbd('→')} for stronger wording.</p>`,
     done: e => e.type === 'dial' && e.kind === 'strength' },
-  { title: 'Walk the ladder', body: `<p>Keep pressing ${kbd('→')} until <strong>recognize</strong>. ${kbd('←')} goes back.</p>`,
-    done: e => e.type === 'dial' && S.rail && S.rail.tid === 'note' && S.rail.level === 3 },
+  { title: 'Stronger still', body: `<p>Press ${kbd('→')} again for <strong>stronger</strong>. ${kbd('←')} goes back towards weak.</p>`,
+    done: e => e.type === 'dial' && S.rail && S.rail.tid === 'note' && S.rail.level - S.rail.base === 2 },
   { title: 'Longer, shorter, plainer', body: `<p>${kbd('↑')} longer, ${kbd('↓')} shorter, ${kbd('R')} changes the register.</p>`,
     done: e => e.type === 'dial' && (e.kind === 'length' || e.kind === 'register') },
   { title: 'Choose one', body: `<p>${kbd('⇥')} moves between proposals; ${kbd('↵')} accepts one.</p>`,
@@ -344,22 +339,23 @@ const STEPS = [
 ];
 // what each step's spotlight falls on, in order; a function, because the page changes as the visitor works
 const SPOT = [
-  () => '[data-t="note"]',
-  () => '.panel', () => '.panel', () => '.panel',
-  () => '.panel .grid',
-  () => '.row[data-id="s3"]',
-  () => (S.mode === 'bracket' ? '.panel.brkp' : '.row[data-id="s3"] [data-b]'),
-  () => '.row[data-id="s3"]',
-  () => (S.mode === 'rail' ? '.panel' : '[data-t="work"]'),
-  () => (S.mode === 'rail' ? '.row:has(.panel)' : '.row:not(.agreed)'),
+  () => '.row[data-id="s1"]',
+  () => '.row[data-id="s1"]', () => '.row[data-id="s1"]', () => '.row[data-id="s1"]', () => '.row[data-id="s1"]',
+  () => '.row[data-id="s3"]', () => '.row[data-id="s3"]', () => '.row[data-id="s3"]',
+  () => '.row[data-id="s2"]',
+  () => '.row:not(.agreed)',
 ];
 const screenEl = $('#screen');
 const spot = document.createElement('div'); spot.className = 'spot'; spot.setAttribute('aria-hidden', 'true'); screenEl.appendChild(spot);
 function placeSpot() {
   const sel = finished ? null : SPOT[step] && SPOT[step]();
-  const el = sel && screenEl.querySelector(sel);
-  if (!el) { spot.classList.remove('on'); return; }
-  const a = screenEl.getBoundingClientRect(), r = el.getBoundingClientRect(), pad = 10;
+  const els = sel ? [...screenEl.querySelectorAll(sel)] : [];
+  if (!els.length) { spot.classList.remove('on'); return; }
+  // one box around everything the step involves
+  const rs = els.map(e => e.getBoundingClientRect());
+  const L = Math.min(...rs.map(q => q.left)), T = Math.min(...rs.map(q => q.top));
+  const r = { left: L, top: T, width: Math.max(...rs.map(q => q.right)) - L, height: Math.max(...rs.map(q => q.bottom)) - T };
+  const a = screenEl.getBoundingClientRect(), pad = 10;
   Object.assign(spot.style, { left: `${r.left - a.left - pad}px`, top: `${r.top - a.top - pad}px`, width: `${r.width + 2 * pad}px`, height: `${r.height + 2 * pad}px` });
   spot.classList.add('on');
 }
