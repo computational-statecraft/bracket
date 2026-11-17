@@ -82,9 +82,10 @@ The sentence being worked on is white at reading height; the rest of the text is
   already adopted, quoted exactly with their source and paragraph, aligned to your selection. Use one (↵) or keep it
   beside your wording in brackets (⇧↵).
 - **The local model's proposals** in a grid, at the current **strength** (←→), **length** (↑↓) and **register**
-  (`R`: plain, institutional, formal diplomatic). On a verb that carries force, the strength dial walks a ladder:
-  *note → acknowledge → recognize → reaffirm*, *invite → encourage → urge → call upon → request → require*,
-  *may → should → shall → must*.
+  (`R`: plain, institutional, formal diplomatic). Strength runs on one scale, *weaker · weak · same · strong ·
+  stronger*, counted from the current wording. On a verb that carries force, each step aims the models at the
+  next rung of a ladder drawn from UN practice (*note → acknowledge → recognize → reaffirm*,
+  *invite → encourage → urge → call upon → request → require*, *may → should → shall → must*).
 - **`C`** adds six proposals from Claude (if switched on); `C` again replaces all nine with fresh ones.
 - Pick with **1–9**, accept with **↵**, or **⇧↵** to keep the proposal *alongside* the current wording as a bracket.
 
