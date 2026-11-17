@@ -166,6 +166,10 @@ p { margin: 0 0 16px; } .muted { color: var(--dim); } .small { font-size: 14px; 
 .guide .nav button:hover { color: var(--fg); border-color: var(--ghost); }
 .guide .done { color: var(--brass); font-weight: 500; }
 .record { margin-top: 18px; border-top: 1px solid var(--hair); padding-top: 14px; }
+.record summary { cursor: pointer; color: var(--faint); list-style: none; }
+.record summary::-webkit-details-marker { display: none; }
+.record summary::after { content: ' +'; } .record[open] summary::after { content: ' −'; }
+.record summary:hover { color: var(--dim); }
 .record ol { list-style: none; margin: 8px 0 0; padding: 0; max-height: 180px; overflow: auto; font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--dim); }
 .record li { padding: 2px 0; border-bottom: 1px dashed var(--hair); }
 .record li b { color: var(--brass); font-weight: 500; }
