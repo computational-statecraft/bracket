@@ -7,7 +7,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 /* ---------------- theme ---------------- */
 const themeBtn = $('#theme');
-const current = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+const current = () => document.documentElement.dataset.theme || 'dark';  // dark unless the visitor chose light
 const paintBtn = () => { themeBtn.textContent = current() === 'dark' ? 'Light' : 'Dark'; };
 themeBtn.addEventListener('click', () => {
   const next = current() === 'dark' ? 'light' : 'dark';
@@ -15,7 +15,6 @@ themeBtn.addEventListener('click', () => {
   try { localStorage.setItem('bracket-theme', next); } catch (e) {}
   paintBtn();
 });
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintBtn);
 paintBtn();
 
 /* ---------------- the hand-written option tree ----------------
@@ -341,7 +340,7 @@ const STEPS = [
 ];
 // what each step's spotlight falls on, in order; a function, because the page changes as the visitor works
 const SPOT = [
-  () => '.row[data-id="s1"]',
+  () => '[data-t="note"]',
   () => '.row[data-id="s1"]', () => '.row[data-id="s1"]', () => '.row[data-id="s1"]', () => '.row[data-id="s1"]',
   () => '.row[data-id="s3"]', () => '.row[data-id="s3"]', () => '.row[data-id="s3"]',
   () => '.row[data-id="s2"]',

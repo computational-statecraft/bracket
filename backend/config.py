@@ -69,7 +69,7 @@ SPEC: dict[str, tuple[tuple[str, ...], object]] = {
     # the room
     "title": (("BRACKET_TITLE",), ""),       # pre-fills the session title
     "org": (("BRACKET_ORG",), ""),           # a small label under the mark, e.g. your organization's name
-    "theme": (("BRACKET_THEME",), "system"), # system | light | dark
+    "theme": (("BRACKET_THEME",), "dark"),   # dark (default) | light | system
     "session": (("BRACKET_SESSION",), ""),   # a session name; "new" forces a fresh one
 }
 SECRET = {"cloud_key"}
@@ -174,7 +174,7 @@ def reload() -> None:
 
     g["DOC_TITLE"] = value("title")
     g["ORG"] = value("org")
-    g["THEME"] = value("theme").lower() if value("theme").lower() in ("system", "light", "dark") else "system"
+    g["THEME"] = value("theme").lower() if value("theme").lower() in ("system", "light", "dark") else "dark"
     g["SESSION_ID"] = value("session")
 
 

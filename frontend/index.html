@@ -22,14 +22,14 @@
     --brk-hi:#efe0bf; --veil:rgba(10,10,11,.96);
     color-scheme:dark;
   }
-  /* light: the same room on paper. --void is always the background and --white the ink, whichever the theme */
+  /* light: the same room on a white page. --void is always the background and --white the ink, whichever the theme */
   :root[data-theme="light"]{
-    --void:#f7f5ef; --white:#131317; --text-rest:rgba(19,19,23,.36); --dim:rgba(19,19,23,.64); --faint:rgba(19,19,23,.48);
+    --void:#ffffff; --white:#131317; --text-rest:rgba(19,19,23,.36); --dim:rgba(19,19,23,.64); --faint:rgba(19,19,23,.48);
     --ghost:rgba(19,19,23,.28); --hair:rgba(19,19,23,.14); --wash:rgba(19,19,23,.07);
     --brass:#7d6030; --crimson:#a5283c; --brk:#86601e; --brk-rest:rgba(134,96,30,.64); --brk-mark:rgba(134,96,30,.5);
     --sel:rgba(19,19,23,.14); --fg-82:rgba(19,19,23,.82); --fg-88:rgba(19,19,23,.88); --fg-60:rgba(19,19,23,.6); --fg-40:rgba(19,19,23,.42);
-    --field:rgba(19,19,23,.03); --focus:rgba(19,19,23,.3); --btn-hover:rgba(19,19,23,.84); --void-0:rgba(247,245,239,0);
-    --brk-hi:#5f420c; --veil:rgba(247,245,239,.96);
+    --field:rgba(19,19,23,.03); --focus:rgba(19,19,23,.3); --btn-hover:rgba(19,19,23,.84); --void-0:rgba(255,255,255,0);
+    --brk-hi:#5f420c; --veil:rgba(255,255,255,.96);
     color-scheme:light;
   }
   *{box-sizing:border-box}
@@ -241,7 +241,7 @@
     <div class="setup-meta caps">
       <span id="stLex">Lexicon…</span>
       <span id="stLog"></span>
-      <span class="theme-pick" role="group" aria-label="Appearance"><button type="button" data-theme-set="system">System</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></span>
+      <span class="theme-pick" role="group" aria-label="Appearance"><button type="button" data-theme-set="dark">Dark</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="system">System</button></span>
       <button type="button" id="settingsBtn">Settings</button>
     </div>
   </div>
@@ -326,7 +326,7 @@ async function loadStatus(){
     if (document.activeElement !== $('#docTitle')) $('#docTitle').textContent = st.title || '';
     titleChanged();
     $('#brandOrg').hidden = !st.org; $('#brandOrg').textContent = st.org || '';
-    applyTheme(st.theme || 'system');
+    applyTheme(st.theme || 'dark');
     $('#stLex').textContent = st.lexicon.ok ? `Lexicon ready · ${st.lexicon.entries.toLocaleString()} words` : 'Lexicon missing';
     $('#stLex').className = st.lexicon.ok ? '' : 'bad';
     $('#stLog').textContent = 'Saved on this computer'; $('#stLog').title = st.data_dir;
@@ -534,7 +534,7 @@ async function openSettings(){
   </div></div>
   <div><h3>The room</h3><div class="sgrid">
     <label>Label under the mark</label><div>${input('org', 'e.g. your organization (optional)')}</div>
-    <label>Appearance</label><div>${select('theme', [['system','Follow the computer'],['light','Light'],['dark','Dark (best on most projectors)']])}</div>
+    <label>Appearance</label><div>${select('theme', [['dark','Dark (best on most projectors)'],['light','Light'],['system','Follow the computer']])}</div>
   </div></div>
   <div class="inline"><button class="small-btn solid" id="setSave">Save settings</button><button class="small-btn" id="quitBtn">Quit bracket</button><span class="muted">Saved to <code>${esc(file)}</code>. API: <code>${location.origin}/docs</code></span></div>`;
   box.hidden = false; $('#settingsBtn').textContent = 'Close settings';
