@@ -25,13 +25,10 @@ request, the following. Each keeps its own license.
 The full dependency list with exact versions is `uv.lock`; each package's own license file is inside the app bundle
 next to the package.
 
-## The precedent library
+## Agreed language
 
-`library/texts/` holds paragraphs of adopted, publicly released texts of NATO, the European Union (European Council),
-the G7 and the G20, downloaded from the URLs in `library/sources.json` and quoted without alteration, with their
-source. These are official statements published for public use; bracket's maintainers believe quoting them with
-attribution is permitted, but this is not legal advice, and the terms of each publisher apply. To ship a build without
-them, leave `library/texts/` empty.
+bracket ships with no precedent documents. Documents a user adds are stored on their own computer, and their
+publishers' terms apply.
 
 ## Downloaded at the user's request
 

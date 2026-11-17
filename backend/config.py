@@ -23,7 +23,7 @@ from pathlib import Path
 
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 
 def _default_data_dir() -> Path:
@@ -69,6 +69,7 @@ SPEC: dict[str, tuple[tuple[str, ...], object]] = {
     # the room
     "title": (("BRACKET_TITLE",), ""),       # pre-fills the session title
     "org": (("BRACKET_ORG",), ""),           # a small label under the mark, e.g. your organization's name
+    "theme": (("BRACKET_THEME",), "system"), # system | light | dark
     "session": (("BRACKET_SESSION",), ""),   # a session name; "new" forces a fresh one
 }
 SECRET = {"cloud_key"}
@@ -173,6 +174,7 @@ def reload() -> None:
 
     g["DOC_TITLE"] = value("title")
     g["ORG"] = value("org")
+    g["THEME"] = value("theme").lower() if value("theme").lower() in ("system", "light", "dark") else "system"
     g["SESSION_ID"] = value("session")
 
 
@@ -183,5 +185,5 @@ CLOUD_API = CLOUD_KEY = CLOUD_MODEL = CLOUD_AUTH = CLOUD_KEY_HEADER = BEDROCK_AP
 CLOUD_BASE_URL: str | None = None
 CLOUD_TIMEOUT_S = 20.0
 CLOUD_ENABLED = CLAUDE_PREFETCH = False
-DOC_TITLE = ORG = SESSION_ID = ""
+DOC_TITLE = ORG = SESSION_ID = THEME = ""
 reload()
