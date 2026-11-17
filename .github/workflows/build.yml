@@ -113,6 +113,7 @@ jobs:
           uv run --no-sync --with pillow python packaging/smoke.py "$exe" --window
       - uses: actions/upload-artifact@v4   # a photograph of the window, to check how it looks (a few hundred KB)
         if: runner.os != 'Linux' && always()
+        continue-on-error: true            # a look, not a test: a full storage quota must not fail the build
         with:
           name: "window-${{ matrix.name }}"
           path: shots/*
