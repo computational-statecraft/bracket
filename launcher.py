@@ -180,15 +180,16 @@ class _Bridge:
     """Called from the page through window.pywebview.api (only inside the app's own window)."""
 
     def __init__(self):
-        self.window = None
+        self._window = None   # private: pywebview walks every public attribute of the bridge, and on Windows the
+        # native form behind a window refers to itself without end (Point.Empty.Empty...), which never finishes
 
     def set_theme(self, dark):
         """The page changed between light and dark: the window's own chrome follows."""
-        _style_window(self.window, bool(dark))
+        _style_window(self._window, bool(dark))
         return True
 
     def toggle_fullscreen(self):
-        self.window.toggle_fullscreen()
+        self._window.toggle_fullscreen()
         return True
 
     def save_files(self, files):
@@ -317,7 +318,7 @@ def _app_window(url: str, server, thread: threading.Thread, server_app, check_af
     except Exception as e:  # noqa: BLE001
         print(f"bracket: no app window ({e}); opening the browser", flush=True)
         return None
-    bridge.window = window
+    bridge._window = window
     result = {"code": 0}
 
     def bring_forward():

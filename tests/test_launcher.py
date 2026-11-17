@@ -23,3 +23,11 @@ def test_only_export_types_with_plain_names_are_saved(tmp_path):
 
 def test_the_bridge_has_no_way_to_open_arbitrary_addresses():
     assert not hasattr(launcher._Bridge, "open_in_browser")
+
+
+def test_the_bridge_exposes_only_its_methods():
+    # pywebview walks every public attribute of the js_api object; a public reference to the window sends it into
+    # the native form on Windows, which refers to itself without end
+    b = launcher._Bridge()
+    public = {k for k in vars(b) if not k.startswith("_")}
+    assert public == set()
