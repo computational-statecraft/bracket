@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[bracket] · a drafting table for rooms that have to agree</title>
+<meta name="description" content="bracket is a free, open-source drafting editor for a room: people write the text, and a model running on the same computer only proposes other words.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<script>
+  // the theme chosen last time on this device (if any), before the page paints
+  try { const t = localStorage.getItem('bracket-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="bracket, home"><span class="word">[bracket]</span><span class="by caps">Project on Computational Statecraft</span></a>
+    <nav aria-label="Sections">
+      <ul>
+        <li class="hide-sm"><a class="caps" href="#how">How it works</a></li>
+        <li><a class="caps" href="#try">Try it</a></li>
+        <li class="hide-sm"><a class="caps" href="#why">Why</a></li>
+        <li><a class="caps" href="#download">Download</a></li>
+        <li><button class="theme caps" id="theme" type="button" aria-label="Switch between light and dark">Dark</button></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="hero" id="top">
+  <div class="wrap">
+    <div>
+    <p class="eyebrow caps">Free and open source · runs on one computer</p>
+    <h1>A drafting table for rooms that have to <span class="b">[agree]</span>.</h1>
+    <p class="lede">bracket puts one draft on one screen in front of a room, with one person at the keyboard.
+      <strong>People write the text. The machine only proposes other words</strong>: stronger or weaker, shorter or
+      longer, plainer or more formal. It is not allowed to add a claim, a name or a number, and that rule is enforced in
+      the code, not left to a prompt.</p>
+    <div class="actions">
+      <a class="btn" href="#try">Try it in your browser</a>
+      <a class="btn ghost" href="#download">Download the app</a>
+    </div>
+    <div class="facts caps"><span>macOS · Windows · Linux</span><span>Works offline</span><span>Apache-2.0</span></div>
+    </div>
+    <figure class="specimen" aria-label="An example of a sentence in bracket">
+      <p class="s">We <span class="bk">[</span><span class="alt">encourage</span><span class="bk"> / </span><span class="alt">urge</span><span class="bk">]</span> all parties to share information in a timely manner.</p>
+      <div class="ladder"><span class="lab">Strength</span><span>invite</span><span>encourage</span><b>urge</b><span>call upon</span><span>request</span><span>require</span></div>
+      <div class="note">Cannot be agreed until the bracket is settled</div>
+    </figure>
+  </div>
+</div>
+
+<section id="how" aria-labelledby="how-h">
+  <div class="wrap">
+    <p class="eyebrow caps">How a room uses it</p>
+    <h2 id="how-h">One text, one keyboard, one room.</h2>
+    <p class="muted" style="max-width:40em">Groups that must agree on a short text (a communiqué, a set of principles, a
+      joint statement) spend most of their time on wording: whether to <em>encourage</em> or <em>urge</em>, whether a
+      clause says <em>should</em> or <em>will</em>. bracket makes that work faster without taking it out of the room's hands.</p>
+    <div class="cols">
+      <div class="step"><span class="n">1</span><h3>Paste the draft</h3><p>It is split into numbered sentences, keeping headings and lists. The room reads it on the projector; nobody else needs a device.</p></div>
+      <div class="step"><span class="n">2</span><h3>Argue over a word</h3><p>Double-click it. Alternatives appear beneath, at the strength, length and register the facilitator dials in with the arrow keys.</p></div>
+      <div class="step"><span class="n">3</span><h3>Keep disagreement visible</h3><p>Unsettled wording stays in the text in square brackets, as negotiators write it: <span style="color:var(--brk)">[encourage / urge]</span>. A sentence with an open bracket cannot be marked agreed.</p></div>
+      <div class="step"><span class="n">4</span><h3>Leave with a record</h3><p>Every proposal shown, accepted or refused is logged. The session ends with the agreed text, each sentence's history, and any dissent.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="try" aria-labelledby="try-h">
+  <div class="wrap">
+    <div class="demo-head">
+      <div>
+        <p class="eyebrow caps">Try it</p>
+        <h2 id="try-h" style="margin:0">Work through a statement.</h2>
+      </div>
+      <p class="small" style="max-width:30em;margin:0">A simulation of the app's live screen. Every proposal here was written
+        by hand in advance: nothing is sent anywhere and no model runs. In the app, a model on your computer writes them,
+        for any word or phrase.</p>
+    </div>
+
+    <div class="demo-grid">
+      <div>
+        <div class="screen" id="screen">
+          <div class="bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>[bracket] · live</span><span id="readout">–</span></div>
+          <div class="stage" id="stage" tabindex="0" role="application" aria-label="Demo drafting screen. Use the keys described in the guide."></div>
+          <div class="foot"><span id="hintline">Click inside the screen, then use the keys</span><span id="toast" class="toast" role="status" aria-live="polite"></span></div>
+          <div class="progress" id="progress" style="width:0"></div>
+        </div>
+        <div class="keys" id="keys" aria-label="On-screen keys" style="margin-top:12px">
+          <button class="key" data-key="ArrowLeft" title="Weaker">←</button>
+          <button class="key" data-key="ArrowRight" title="Stronger">→</button>
+          <button class="key" data-key="ArrowUp" title="Longer">↑</button>
+          <button class="key" data-key="ArrowDown" title="Shorter">↓</button>
+          <button class="key" data-key="r" title="Register">R</button>
+          <button class="key" data-key="Tab" title="Next proposal">⇥</button>
+          <button class="key" data-key="Enter" title="Accept or settle">↵</button>
+          <button class="key" data-key="ShiftEnter" title="Keep as alternative, or toggle agreed">⇧↵</button>
+          <button class="key" data-key="Escape" title="Close">esc</button>
+          <button class="key" data-key="Undo" title="Undo">undo</button>
+        </div>
+      </div>
+
+      <aside class="guide" aria-live="polite">
+        <div class="count caps" id="gcount"></div>
+        <h3 id="gtitle"></h3>
+        <div id="gbody"></div>
+        <div class="nav"><button type="button" id="gback">Back</button><button type="button" id="gnext">Skip step</button><button type="button" id="greset">Start over</button></div>
+        <div class="record">
+          <div class="caps" style="color:var(--faint)">The record, as it is written</div>
+          <ol id="log"></ol>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="guard" aria-labelledby="guard-h">
+  <div class="wrap">
+    <p class="eyebrow caps">The rule</p>
+    <h2 id="guard-h">The machine proposes words, never positions.</h2>
+    <p class="muted" style="max-width:42em">Every proposal, from any model, passes a check before the room sees it. The
+      check does not rely on the model behaving: a proposal that breaks the rule is removed, and one that might change
+      the meaning is marked for the room to decide.</p>
+    <div class="rules">
+      <div class="rule"><span class="tag no caps">Removed</span><p>A proposal that names a country, organization or person not already in the sentence.</p></div>
+      <div class="rule"><span class="tag flag caps">Flagged ▲</span><p>A changed number, a changed modal (<em>should</em> → <em>must</em>), added or dropped negation, a large jump in length.</p></div>
+      <div class="rule"><span class="tag yes caps">Quoted, never generated</span><p>Agreed language: sentences from texts your group has already adopted, shown word for word with their source.</p></div>
+      <div class="rule"><span class="tag yes caps">Left alone</span><p>Bracketed text. The models are told not to touch it, and the room settles it.</p></div>
+    </div>
+
+    <div class="guard" id="guardbox">
+      <p class="caps" style="color:var(--brass);margin:0">Try the check</p>
+      <p class="src">Members will <mark>work towards</mark> a common approach to search and rescue, consistent with international law.</p>
+      <label class="caps" for="gin">Your replacement for “work towards”</label>
+      <input id="gin" type="text" autocomplete="off" spellcheck="false" value="pursue">
+      <div class="tries" aria-label="Examples">
+        <button type="button">pursue</button><button type="button">work with the IMO towards</button>
+        <button type="button">agree, within two years, on</button><button type="button">not seek</button><button type="button">must reach</button>
+      </div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+      <p class="small" style="margin:14px 0 0">A simplified copy of the app's check, running in this page. The app's
+        version uses a language model of English grammar to find names, not capital letters.</p>
+    </div>
+  </div>
+</section>
+
+<section id="why" aria-labelledby="why-h">
+  <div class="narrow">
+    <p class="eyebrow caps">Why build it this way</p>
+    <h2 id="why-h">Every shortcut has a cost. The question is which cost is worth paying.</h2>
+    <p>There is a wide range of ways to work with advanced technology, from handing it the whole task to refusing it
+      altogether. Most tools for reaching agreement with AI sit near the first end: the model writes the shared text and
+      people react to it. That works for gathering the views of thousands. It sits badly with a small room of people who
+      are accountable for every word.</p>
+    <p>The cost of delegation is measurable. In controlled studies, a writing assistant with a point of view shifted
+      what people wrote and, afterwards, what they said they believed, mostly without their noticing; and suggestions
+      pull prose towards the model's own style. Negotiators already know a milder version of the problem: research on
+      diplomats drafting in shared documents finds that features like track changes shape the negotiation itself, and
+      can produce texts nobody quite intended.</p>
+    <p>So bracket limits the machine to what it is good at and a room is slow at: finding the next word. Everything
+      else stays with the people, and the software takes its working objects from negotiating practice: the single
+      text that every party edits, square brackets for wording not yet agreed, and agreed language carried over word
+      for word. Whether this helps a room keep control of its text is the question bracket is built to test. We do not
+      claim that it improves outcomes.</p>
+  </div>
+  <div class="wrap">
+    <div class="tablewrap">
+      <table>
+        <caption class="small" style="text-align:left;caption-side:bottom;padding-top:12px">Related systems, as described in their own publications. Agreement tools built for large groups solve a different problem: aggregating the views of many people.</caption>
+        <thead><tr><th>System</th><th>Who writes the text</th><th>Disagreement kept in the text</th><th>Precedent quoted word for word</th><th>Wording-strength control</th><th>Runs on one computer</th></tr></thead>
+        <tbody>
+          <tr><td>Habermas Machine <span class="small">Google DeepMind</span></td><td>The model drafts group statements; people rank them</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
+          <tr><td>CICERO <span class="small">Meta</span></td><td>The model negotiates in its own words (in the game <em>Diplomacy</em>)</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
+          <tr><td>Facilitator in Teams <span class="small">Microsoft</span></td><td>The model takes notes and summaries for the meeting</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
+          <tr><td>Polis <span class="small">open source</span></td><td>Participants write; an algorithm groups and selects</td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td></tr>
+          <tr><td>Upwelling, Patchwork <span class="small">Ink &amp; Switch</span></td><td>People write; machine edits arrive as reviewable changes</td><td><span class="n">as branches</span></td><td><span class="n">no</span></td><td><span class="n">no</span></td><td><span class="y">yes</span></td></tr>
+          <tr class="us"><td>[bracket]</td><td>People write; a model only rewords, under a rule enforced in code</td><td><span class="y">yes, and it blocks agreement</span></td><td><span class="y">yes, from documents you add</span></td><td><span class="y">yes, verb ladders</span></td><td><span class="y">yes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="narrow" style="margin-top:44px">
+    <h3>What is new, and what is not</h3>
+    <p class="muted">None of the parts is new. Drafting from a single shared text is a 1970s negotiating procedure;
+      live editors, model rewording, local models and text search are all off the shelf. What bracket adds is the
+      combination and the constraint: brackets that block agreement, quoted precedent inside a live drafting screen, a
+      control for the strength of the wording, and a reword-only rule enforced in code, with a record of everything
+      offered and refused.</p>
+    <h3 style="margin-top:30px">Reading</h3>
+    <ul class="refs">
+      <li>Adler-Nissen, R. &amp; Drieschova, A. (2019). Track-change diplomacy: technology, affordances, and the practice of international negotiations. <em>International Studies Quarterly</em> 63(3).</li>
+      <li>Riles, A. (1998). Infinity within the brackets. <em>American Ethnologist</em> 25(3).</li>
+      <li>Fisher, R. &amp; Ury, W. (1981). <em>Getting to Yes</em>: on the single negotiating text used at Camp David. Raiffa, H. (1982). <em>The Art and Science of Negotiation</em>.</li>
+      <li>Depledge, J. (2005). <em>The Organization of Global Negotiations: Constructing the Climate Change Regime</em>.</li>
+      <li>Jakesch, M., Bhat, A., Buschek, D., Zalmanson, L. &amp; Naaman, M. (2023). Co-writing with opinionated language models affects users' views. <em>CHI 2023</em>.</li>
+      <li>Agarwal, D., Naaman, M. &amp; Vashistha, A. (2025). AI suggestions homogenize writing toward Western styles and diminish cultural nuances. <em>CHI 2025</em>.</li>
+      <li>Tessler, M. H. et al. (2024). AI can help humans find common ground in democratic deliberation. <em>Science</em> 386.</li>
+      <li>Meta FAIR Diplomacy Team et al. (2022). Human-level play in the game of <em>Diplomacy</em> by combining language models with strategic reasoning. <em>Science</em> 378.</li>
+      <li>Lee, M., Liang, P. &amp; Yang, Q. (2022). CoAuthor: designing a human–AI collaborative writing dataset. <em>CHI 2022</em>.</li>
+      <li>Ink &amp; Switch (2023, 2024). Upwelling; Patchwork. Lab notebooks.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="download" aria-labelledby="dl-h">
+  <div class="wrap">
+    <p class="eyebrow caps">Download</p>
+    <h2 id="dl-h">Download, open, choose a model.</h2>
+    <p class="muted" style="max-width:42em">No terminal, nothing else to install. bracket opens in its own window and
+      everything runs on your computer; nothing leaves it unless you switch on the optional Claude tier.</p>
+    <div class="dl">
+      <a class="card" href="https://github.com/computational-statecraft/bracket/releases/latest"><span class="os">Mac</span><span class="meta">Apple silicon (M1 or later) · .dmg</span></a>
+      <a class="card" href="https://github.com/computational-statecraft/bracket/releases/latest"><span class="os">Windows</span><span class="meta">Windows 10 or 11, 64-bit · .zip</span></a>
+      <a class="card" href="https://github.com/computational-statecraft/bracket/releases/latest"><span class="os">Linux</span><span class="meta">x86-64, Ubuntu 22.04 or later · .tar.gz</span></a>
+    </div>
+    <div class="cols" style="margin-top:44px">
+      <div>
+        <h3>First open</h3>
+        <ol class="plain">
+          <li><strong>Mac:</strong> drag bracket to Applications and open it. The app is not yet signed, so macOS asks once: choose <em>Done</em>, then <em>System Settings → Privacy &amp; Security → Open Anyway</em>.</li>
+          <li><strong>Windows:</strong> extract the zip and open <em>bracket.exe</em>. If SmartScreen appears, choose <em>More info → Run anyway</em>.</li>
+          <li><strong>Linux:</strong> extract and run <em>bracket/bracket</em>.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>Choosing a model</h3>
+        <p class="muted">The setup screen lists what is already on your computer first: models in Ollama, and Apple's
+          on-device model on Macs with Apple Intelligence. Otherwise it recommends a download for your computer's
+          memory, from 3 GB to 17 GB, fetched once and then used offline.</p>
+      </div>
+      <div>
+        <h3>Optional: Claude</h3>
+        <p class="muted">Paste an Anthropic API key on the setup screen and the facilitator can ask Claude for more
+          proposals by pressing <kbd>C</kbd>. Only the sentence being worked on is sent, and only then.</p>
+      </div>
+    </div>
+    <p class="small" style="margin-top:30px">Source code, documentation and the local API: <a href="https://github.com/computational-statecraft/bracket">github.com/computational-statecraft/bracket</a>.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>[bracket] · Project on Computational Statecraft</span>
+    <span>Apache-2.0 · <a href="https://github.com/computational-statecraft/bracket">Source</a></span>
+  </div>
+</footer>
+
+<script src="demo.js"></script>
+</body>
+</html>
