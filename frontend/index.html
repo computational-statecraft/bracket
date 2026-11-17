@@ -186,7 +186,9 @@
   .mrow .mr{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
   .mrow.dis{opacity:.45}
   .dl{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-  .dlbar{height:2px;background:var(--hair);position:relative;overflow:hidden} .dlbar i{position:absolute;left:0;top:0;bottom:0;background:var(--brass);transition:width 400ms var(--ease)}
+  .dlbar{height:3px;border-radius:2px;background:var(--hair);position:relative;overflow:hidden} .dlbar i{position:absolute;left:0;top:0;bottom:0;background:var(--brass);transition:width 400ms var(--ease)}
+  .dlhead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap} .dlpct{font-family:var(--serif);font-size:44px;line-height:1;color:var(--white)}
+  .dlname{font-size:13px;letter-spacing:.04em;color:var(--white)}
   .small-btn{background:none;border:1px solid var(--hair);padding:9px 16px;cursor:pointer;color:var(--white);border-radius:1px;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
   .small-btn:hover{border-color:var(--fg-40)} .small-btn.solid{background:var(--white);color:var(--void);border-color:var(--white)}
   .small-btn:disabled{opacity:.4;cursor:default}
@@ -387,9 +389,11 @@ function renderDownload(x){
   const left = d.rate ? Math.max(0, (d.total - d.done) / d.rate) : null;
   const eta = left == null ? '' : left > 90 ? ` · about ${Math.round(left / 60)} min left` : ` · under ${Math.max(1, Math.ceil(left / 10) * 10)} s left`;
   const el = $('#stLocal'); el.className = 'v';
-  el.innerHTML = (d.state === 'verifying' ? `Checking ${esc(x.label)}…` : `Downloading ${esc(x.label)}`) +
-    `<small>${gb(d.done)} of ${gb(d.total)}${d.rate ? ' · ' + (d.rate / 1e6).toFixed(0) + ' MB/s' : ''}${eta}${d.error ? ' · ' + esc(d.error) : ''}. You can keep setting up meanwhile; closing bracket pauses the download, and it resumes next time.</small>` +
-    `<div class="dl"><div class="dlbar"><i style="width:${pct.toFixed(1)}%"></i></div><div><button class="small-btn" id="dlCancel">Cancel</button></div></div>`;
+  el.innerHTML = `<div class="dlhead"><span class="dlpct">${d.state === 'verifying' ? '✓' : Math.floor(pct) + '%'}</span><span class="dlname">${d.state === 'verifying' ? 'Checking' : 'Downloading'} ${esc(x.label)}</span></div>` +
+    `<div class="dl"><div class="dlbar"><i style="width:${pct.toFixed(1)}%"></i></div></div>` +
+    `<small>${gb(d.done)} of ${gb(d.total)}${d.rate ? ' · ' + (d.rate / 1e6).toFixed(0) + ' MB/s' : ''}${eta}${d.error ? ' · ' + esc(d.error) : ''}</small>` +
+    `<small>Keep setting up meanwhile. If bracket closes, the download picks up where it stopped.</small>` +
+    `<div class="inline"><button class="small-btn" id="dlCancel">Cancel</button></div>`;
   $('#dlCancel').addEventListener('click', async () => { await api(`/api/models/${x.id}/cancel`); setTimeout(() => refreshLocal(false), 400); });
 }
 // a real round trip, so "ready" means the model answers, not only that it is configured
