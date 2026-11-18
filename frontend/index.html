@@ -440,7 +440,7 @@ function renderLibrary(lb){
   const el = $('#stLib'); el.className = 'v';
   if (S.status) S.status.library = lb;
   const head = lb.ok
-    ? `${lb.docs} document${lb.docs === 1 ? '' : 's'}${lb.bodies && lb.bodies.length ? ' · ' + lb.bodies.join(', ') : ''}<small>Matching sentences are shown above the proposals, quoted exactly with their source.</small>`
+    ? `${lb.docs} document${lb.docs === 1 ? '' : 's'}${lb.bodies && lb.bodies.length ? ' · ' + esc(lb.bodies.join(', ')) : ''}<small>Matching sentences are shown above the proposals, quoted exactly with their source.</small>`
     : `None yet<small>Add texts your group has already adopted (declarations, conclusions, communiqués). When the room works on a sentence, [bracket] shows matching sentences from them, quoted exactly with their source, never rewritten.</small>`;
   el.innerHTML = head + `<div class="inline" id="libAddRow"><button class="small-btn" id="libAddBtn" type="button">${lb.ok ? 'Add another' : 'Add a document'}</button></div>`;
   $('#libAddBtn').addEventListener('click', () => {
@@ -695,7 +695,7 @@ function render(){
 }
 function gutHTML(s){
   const num = s.kind === 'li' && s.brk && s.label ? `<span class="num">${esc(s.label)}</span>` : '';
-  const mk = s.state === 'agreed' ? `<span class="mk agreed caps">Agreed</span>` : s.state === 'open' ? `<span class="mk open caps">Open</span>` : (s.version > 1 ? `<span class="mk v caps">v${s.version}</span>` : '');
+  const mk = s.state === 'agreed' ? `<span class="mk agreed caps">Agreed</span>` : s.state === 'open' ? `<span class="mk open caps">Open</span>` : (s.version > 1 ? `<span class="mk v caps">v${Number(s.version) || 1}</span>` : '');
   const dis = s.dissents.length ? `<span class="mk v caps">${s.dissents.length} dissent${s.dissents.length>1?'s':''}</span>` : '';
   const nb = bracketsIn(s.text || '').length;
   const brk = nb ? `<span class="mk brk caps">${nb} bracket${nb>1?'s':''}</span>` : '';
@@ -789,8 +789,8 @@ function renderExtras(s){
   }
   if (S.showHist === s.id){
     const d = document.createElement('div'); d.className = 'hist caps';
-    d.innerHTML = `<span>History</span>` + s.history.map((h, i) => `<span class="${i===s.history.length-1?'now':''}">v${h.version} ${h.at}${h.via && h.via!=='seed' ? ' · '+esc(h.via) : ''}</span>`).join('<span>→</span>') +
-      s.dissents.map(d => `<span class="dis">Dissent v${d.version} · ${esc(d.who)}: ${esc(d.note)}</span>`).join('');
+    d.innerHTML = `<span>History</span>` + s.history.map((h, i) => `<span class="${i===s.history.length-1?'now':''}">v${Number(h.version) || 1} ${esc(h.at || '')}${h.via && h.via!=='seed' ? ' · '+esc(h.via) : ''}</span>`).join('<span>→</span>') +
+      s.dissents.map(d => `<span class="dis">Dissent v${Number(d.version) || 1} · ${esc(d.who)}: ${esc(d.note)}</span>`).join('');
     wrap.appendChild(d); any = true;
   }
   if (S.mode === 'dissent' && S.focusId === s.id){
