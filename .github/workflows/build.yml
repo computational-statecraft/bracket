@@ -154,10 +154,24 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write       # create the release
+      id-token: write       # sign the build provenance (Sigstore, through GitHub's OIDC token)
+      attestations: write   # store the attestation with the repository
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with: { path: out, pattern: "bracket-*", merge-multiple: true }
+      # anyone can check a download: shasum -a 256 -c SHA256SUMS.txt (macOS, Linux) or Get-FileHash (Windows)
+      - name: Checksums
+        run: |
+          cd out
+          test -n "$(ls bracket-*)" || { echo "::error::no app files to release"; exit 1; }
+          sha256sum bracket-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      # a signed statement that these exact files were built by this workflow, from this commit, in this repository:
+      # gh attestation verify <file> --repo computational-statecraft/bracket
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+        with:
+          subject-path: out/bracket-*
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           files: out/*

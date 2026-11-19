@@ -21,8 +21,11 @@ No terminal, no Python, no separate installs.
 
 | Computer | File |
 |---|---|
-| Mac with Apple silicon (M1 or later) | `bracket-macOS-arm64.dmg` (about 175 MB) |
-| Windows 10 or 11 (64-bit) | `bracket-Windows-x64.zip` (about 150 MB) |
+| Mac with Apple silicon (M1 or later) | [`bracket-macOS-arm64.dmg`](https://github.com/computational-statecraft/bracket/releases/latest/download/bracket-macOS-arm64.dmg) (about 175 MB) |
+| Windows 10 or 11 (64-bit) | [`bracket-Windows-x64.zip`](https://github.com/computational-statecraft/bracket/releases/latest/download/bracket-Windows-x64.zip) (about 150 MB) |
+
+Each release also carries `SHA256SUMS.txt` and a signed build attestation, so you can check that a download is the
+file this repository's build made (see [Checking a download](#checking-a-download)).
 
 **2. Open it.**
 
@@ -381,6 +384,27 @@ maintainers; verify them before citing.
 - **Alt shortcuts on Windows.** bracket takes Alt+letter keys for itself; some browsers or keyboard layouts may
   intercept a few of them.
 - **Name.** Other products use "bracket" or "brackets"; search for "computational-statecraft/bracket".
+
+## Checking a download
+
+Because the apps are not yet code-signed, each release carries two ways to check that a file is the one this
+repository's build workflow made, from a tagged commit, and has not been swapped or altered since:
+
+- **Checksums.** `SHA256SUMS.txt` on the release lists each file's SHA-256. In the folder holding both files:
+
+  ```bash
+  shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+  ```
+
+  On Windows (PowerShell), compare `Get-FileHash bracket-Windows-x64.zip` with the line in `SHA256SUMS.txt`.
+  A checksum from the same page catches a damaged or swapped mirror copy, not a compromised release page; the
+  attestation below covers that.
+- **Build attestation.** Each file is attested with GitHub's signed build provenance, which names the workflow, the
+  commit and the repository that built it. With the [GitHub CLI](https://cli.github.com):
+
+  ```bash
+  gh attestation verify bracket-macOS-arm64.dmg --repo computational-statecraft/bracket
+  ```
 
 ## Licence
 
